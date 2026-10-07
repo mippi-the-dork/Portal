@@ -3,10 +3,16 @@
 #include "PortalModule.h"
 
 #include "EdGraph/EdGraphNode.h"
+#include "EdGraph/EdGraphPin.h"
+#include "EdGraphSchema_K2.h"
 #include "EdGraphUtilities.h"
+#include "Framework/Application/SlateApplication.h"
 #include "Framework/Commands/UIAction.h"
+#include "Framework/MultiBox/MultiBoxBuilder.h"
+#include "GraphEditorModule.h"
 #include "K2Node_Knot.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "PortalInputProcessor.h"
 #include "PortalNativeUtils.h"
 #include "PortalNodeFactory.h"
 #include "ToolMenu.h"
@@ -28,6 +34,62 @@ namespace
         return Cast<UK2Node_Knot>(const_cast<UEdGraphNode*>(Context->Node.Get()));
     }
 
+    TSharedRef<FExtender> ExtendPortalPinContextMenu(
+        const TSharedRef<FUICommandList> CommandList,
+        const UEdGraph* Graph,
+        const UEdGraphNode* Node,
+        const UEdGraphPin* Pin,
+        bool bIsConst)
+    {
+        TSharedRef<FExtender> Extender = MakeShared<FExtender>();
+        if (bIsConst || !Graph || !Graph->GetSchema() || !Graph->GetSchema()->IsA<UEdGraphSchema_K2>() ||
+            !PortalNativeUtils::CanCreatePortalFromOutputPin(Pin))
+        {
+            return Extender;
+        }
+
+        TWeakObjectPtr<UEdGraphNode> WeakOwner(Pin->GetOwningNode());
+        const FGuid PinId = Pin->PinId;
+        Extender->AddMenuExtension(
+            TEXT("EdGraphSchemaPinActions"),
+            EExtensionHook::Before,
+            CommandList,
+            FMenuExtensionDelegate::CreateLambda([WeakOwner, PinId](FMenuBuilder& MenuBuilder)
+            {
+                MenuBuilder.BeginSection(TEXT("PortalPinActions"), LOCTEXT("PortalPinActionsSection", "Portal"));
+                MenuBuilder.AddMenuEntry(
+                    LOCTEXT("CreatePortalFromPinLabel", "Create Portal"),
+                    LOCTEXT("CreatePortalFromPinTooltip", "Creates a Portal Input from this data output pin and connects it automatically."),
+                    FSlateIcon(),
+                    FUIAction(FExecuteAction::CreateLambda([WeakOwner, PinId]()
+                    {
+                        UEdGraphNode* Owner = WeakOwner.Get();
+                        if (!Owner)
+                        {
+                            return;
+                        }
+
+                        UEdGraphPin* CurrentPin = nullptr;
+                        for (UEdGraphPin* Candidate : Owner->Pins)
+                        {
+                            if (Candidate && Candidate->PinId == PinId)
+                            {
+                                CurrentPin = Candidate;
+                                break;
+                            }
+                        }
+
+                        if (UK2Node_Knot* Input = PortalNativeUtils::CreatePortalFromOutputPin(CurrentPin))
+                        {
+                            FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(Input, true);
+                        }
+                    })));
+                MenuBuilder.EndSection();
+            }));
+
+        return Extender;
+    }
+
     void AddPortalContextEntries(FToolMenuSection& Section)
     {
         UK2Node_Knot* Knot = GetContextKnot(Section);
@@ -41,10 +103,16 @@ namespace
 
         if (Role == EPortalKnotRole::None)
         {
+            if ((Knot->GetInputPin() && Knot->GetInputPin()->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) ||
+                (Knot->GetOutputPin() && Knot->GetOutputPin()->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec))
+            {
+                return;
+            }
+
             Section.AddMenuEntry(
                 TEXT("PortalConvertReroute"),
-                LOCTEXT("PortalConvertRerouteLabel", "Convert to Portal Declaration"),
-                LOCTEXT("PortalConvertRerouteTooltip", "Converts this native Blueprint reroute into a Portal Declaration. Existing outgoing branches become Portal Usages."),
+                LOCTEXT("PortalConvertRerouteLabel", "Convert to Portal Input"),
+                LOCTEXT("PortalConvertRerouteTooltip", "Converts this native Blueprint reroute into a Portal Input. Existing outgoing branches become Portal Outputs."),
                 FSlateIcon(),
                 FUIAction(FExecuteAction::CreateLambda([WeakKnot]()
                 {
@@ -61,8 +129,8 @@ namespace
         {
             Section.AddMenuEntry(
                 TEXT("PortalCreateUsage"),
-                LOCTEXT("PortalCreateUsageLabel", "Create Usage"),
-                LOCTEXT("PortalCreateUsageTooltip", "Creates another Usage for this Portal."),
+                LOCTEXT("PortalCreateUsageLabel", "Create Output"),
+                LOCTEXT("PortalCreateUsageTooltip", "Creates another Output for this Portal."),
                 FSlateIcon(),
                 FUIAction(FExecuteAction::CreateLambda([WeakKnot]()
                 {
@@ -77,8 +145,8 @@ namespace
         {
             Section.AddMenuEntry(
                 TEXT("PortalJumpToDeclaration"),
-                LOCTEXT("PortalJumpToDeclarationLabel", "Jump to Declaration"),
-                LOCTEXT("PortalJumpToDeclarationTooltip", "Focuses this Usage's Portal Declaration."),
+                LOCTEXT("PortalJumpToDeclarationLabel", "Jump to Input"),
+                LOCTEXT("PortalJumpToDeclarationTooltip", "Focuses this Output's Portal Input."),
                 FSlateIcon(),
                 FUIAction(
                     FExecuteAction::CreateLambda([WeakKnot]()
@@ -101,8 +169,8 @@ namespace
 
             Section.AddMenuEntry(
                 TEXT("PortalCreateAnotherUsage"),
-                LOCTEXT("PortalCreateAnotherUsageLabel", "Create Another Usage"),
-                LOCTEXT("PortalCreateAnotherUsageTooltip", "Creates another Usage for this Portal."),
+                LOCTEXT("PortalCreateAnotherUsageLabel", "Create Another Output"),
+                LOCTEXT("PortalCreateAnotherUsageTooltip", "Creates another Output for this Portal."),
                 FSlateIcon(),
                 FUIAction(
                     FExecuteAction::CreateLambda([WeakKnot]()
@@ -127,7 +195,7 @@ namespace
         Section.AddMenuEntry(
             TEXT("PortalSelectFamily"),
             LOCTEXT("PortalSelectFamilyLabel", "Select Portal Family"),
-            LOCTEXT("PortalSelectFamilyTooltip", "Selects the Declaration and every Usage in this Portal family."),
+            LOCTEXT("PortalSelectFamilyTooltip", "Selects the Input and every Output in this Portal family."),
             FSlateIcon(),
             FUIAction(FExecuteAction::CreateLambda([WeakKnot]()
             {
@@ -179,6 +247,18 @@ void FPortalModule::StartupModule()
     NodeFactory = MakeShared<FPortalNodeFactory>();
     FEdGraphUtilities::RegisterVisualNodeFactory(NodeFactory);
 
+    FGraphEditorModule& GraphEditorModule = FModuleManager::LoadModuleChecked<FGraphEditorModule>(TEXT("GraphEditor"));
+    FGraphEditorModule::FGraphEditorMenuExtender_SelectedNode PinMenuExtender =
+        FGraphEditorModule::FGraphEditorMenuExtender_SelectedNode::CreateStatic(&ExtendPortalPinContextMenu);
+    GraphContextMenuExtenderHandle = PinMenuExtender.GetHandle();
+    GraphEditorModule.GetAllGraphEditorContextMenuExtender().Add(PinMenuExtender);
+
+    if (FSlateApplication::IsInitialized())
+    {
+        InputProcessor = MakeShared<FPortalInputProcessor>();
+        FSlateApplication::Get().RegisterInputPreProcessor(InputProcessor, 0);
+    }
+
     UToolMenus::RegisterStartupCallback(FSimpleMulticastDelegate::FDelegate::CreateRaw(this, &FPortalModule::RegisterMenus));
 
     RepairTickerHandle = FTSTicker::GetCoreTicker().AddTicker(
@@ -192,6 +272,22 @@ void FPortalModule::ShutdownModule()
     {
         FTSTicker::GetCoreTicker().RemoveTicker(RepairTickerHandle);
         RepairTickerHandle.Reset();
+    }
+
+    if (InputProcessor.IsValid() && FSlateApplication::IsInitialized())
+    {
+        FSlateApplication::Get().UnregisterInputPreProcessor(InputProcessor);
+        InputProcessor.Reset();
+    }
+
+    if (GraphContextMenuExtenderHandle.IsValid() && FModuleManager::Get().IsModuleLoaded(TEXT("GraphEditor")))
+    {
+        FGraphEditorModule& GraphEditorModule = FModuleManager::GetModuleChecked<FGraphEditorModule>(TEXT("GraphEditor"));
+        GraphEditorModule.GetAllGraphEditorContextMenuExtender().RemoveAll([this](const FGraphEditorModule::FGraphEditorMenuExtender_SelectedNode& Delegate)
+        {
+            return Delegate.GetHandle() == GraphContextMenuExtenderHandle;
+        });
+        GraphContextMenuExtenderHandle.Reset();
     }
 
     if (NodeFactory.IsValid())

@@ -6,6 +6,7 @@
 #include "Modules/ModuleManager.h"
 
 struct FGraphPanelNodeFactory;
+class IInputProcessor;
 
 class FPortalModule final : public IModuleInterface
 {
@@ -18,5 +19,7 @@ private:
     bool TickRepair(float DeltaTime);
 
     TSharedPtr<FGraphPanelNodeFactory> NodeFactory;
+    TSharedPtr<IInputProcessor> InputProcessor;
     FTSTicker::FDelegateHandle RepairTickerHandle;
+    FDelegateHandle GraphContextMenuExtenderHandle;
 };

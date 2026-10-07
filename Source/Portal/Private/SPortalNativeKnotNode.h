@@ -23,7 +23,7 @@ public:
 
 private:
     FText GetPortalTitle() const;
-    FText GetPortalBadge() const;
+    FText GetPortalIcon() const;
     FText GetPortalCountText() const;
     FText GetPortalTooltip() const;
     FSlateColor GetPortalTint() const;

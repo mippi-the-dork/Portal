@@ -120,7 +120,7 @@ FText UK2Node_PortalDeclaration::GetNodeTitle(ENodeTitleType::Type TitleType) co
 {
     if (TitleType == ENodeTitleType::MenuTitle)
     {
-        return LOCTEXT("PortalDeclarationMenuTitle", "Portal Declaration");
+        return LOCTEXT("PortalDeclarationMenuTitle", "Portal Input");
     }
 
     return FText::FromName(PortalName.IsNone() ? FName(TEXT("Portal")) : PortalName);
@@ -132,7 +132,7 @@ FText UK2Node_PortalDeclaration::GetTooltipText() const
     PortalGraphUtils::GetUsagesForDeclaration(this, Usages);
 
     return FText::Format(
-        LOCTEXT("PortalDeclarationTooltip", "Portal Declaration '{0}'. {1} linked Usage(s). Right-click to create another Usage or select the Portal family."),
+        LOCTEXT("PortalDeclarationTooltip", "Portal Input '{0}'. {1} linked Output(s). Right-click to create another Output or select the Portal family."),
         FText::FromName(PortalName.IsNone() ? FName(TEXT("Portal")) : PortalName),
         FText::AsNumber(Usages.Num())
     );
@@ -174,8 +174,8 @@ void UK2Node_PortalDeclaration::GetNodeContextMenuActions(UToolMenu* Menu, UGrap
     FToolMenuSection& Section = Menu->AddSection(TEXT("Portal"), LOCTEXT("PortalContextSection", "Portal"));
     Section.AddMenuEntry(
         TEXT("PortalCreateUsage"),
-        LOCTEXT("PortalCreateUsageLabel", "Create Usage"),
-        LOCTEXT("PortalCreateUsageTooltip", "Creates another Usage for this Portal."),
+        LOCTEXT("PortalCreateUsageLabel", "Create Output"),
+        LOCTEXT("PortalCreateUsageTooltip", "Creates another Output for this Portal."),
         FSlateIcon(),
         FUIAction(FExecuteAction::CreateLambda([WeakDeclaration]()
         {
@@ -189,7 +189,7 @@ void UK2Node_PortalDeclaration::GetNodeContextMenuActions(UToolMenu* Menu, UGrap
     Section.AddMenuEntry(
         TEXT("PortalSelectAllUsages"),
         LOCTEXT("PortalSelectAllUsagesLabel", "Select Portal Family"),
-        LOCTEXT("PortalSelectAllUsagesTooltip", "Selects this Declaration and every Usage linked to it."),
+        LOCTEXT("PortalSelectAllUsagesTooltip", "Selects this Input and every Output linked to it."),
         FSlateIcon(),
         FUIAction(FExecuteAction::CreateLambda([WeakDeclaration]()
         {
@@ -417,7 +417,7 @@ UK2Node_PortalUsage* UK2Node_PortalDeclaration::CreateUsageNode()
         return nullptr;
     }
 
-    const FScopedTransaction Transaction(LOCTEXT("CreatePortalUsageTransaction", "Create Portal Usage"));
+    const FScopedTransaction Transaction(LOCTEXT("CreatePortalUsageTransaction", "Create Portal Output"));
     Graph->Modify();
     Modify();
 

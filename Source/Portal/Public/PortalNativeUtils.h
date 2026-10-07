@@ -43,6 +43,9 @@ namespace PortalNativeUtils
     PORTAL_API void GetUsages(const UK2Node_Knot* Declaration, TArray<UK2Node_Knot*>& OutUsages);
     PORTAL_API bool IsOrphanUsage(const UK2Node_Knot* Usage);
 
+    PORTAL_API UK2Node_Knot* CreatePortalInput(UEdGraph* Graph, const FVector2f& Position);
+    PORTAL_API bool CanCreatePortalFromOutputPin(const UEdGraphPin* SourcePin);
+    PORTAL_API UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin);
     PORTAL_API UK2Node_Knot* CreateUsage(UK2Node_Knot* Declaration, const FVector2f* OptionalPosition = nullptr);
     PORTAL_API bool ConvertRerouteToPortal(UK2Node_Knot* Knot);
     PORTAL_API void ConvertPortalFamilyToReroutes(UK2Node_Knot* AnyFamilyNode);

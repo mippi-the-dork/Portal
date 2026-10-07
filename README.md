@@ -1,8 +1,8 @@
-# Portal 0.4.2
+# Portal 0.6.0
 
 Portal brings Named Reroute-style data routing to Unreal Engine Blueprint graphs.
 
-0.4.2 keeps the native-safe foundation introduced in 0.4.x and fixes the InputCore link dependency required by Portal's double-click mouse handling. The native-safe architecture still replaces the prototype custom saved-node architecture with a native-safe foundation. Portal families are now built from stock `UK2Node_Knot` Blueprint reroute nodes. Portal adds identity and presentation through editor metadata and Slate only.
+Portal 0.6.0 keeps the native-safe foundation and tightens Portal authoring and readability. Portal Input and Output nodes now mirror one another visually, both ends show the family Output count, data output pins can create a Portal directly, and execution pins are explicitly excluded from Portal authoring.
 
 ## Target
 
@@ -14,16 +14,9 @@ Portal brings Named Reroute-style data routing to Unreal Engine Blueprint graphs
 - No runtime Portal system
 - No engine source changes
 
-
-## 0.4.2 Link Fix
-
-- Added the Unreal `InputCore` module dependency required by `EKeys::LeftMouseButton` in `SPortalNativeKnotNode`.
-- Fixes the UE 5.8 linker error for `EKeys::LeftMouseButton`.
-- No Portal persistence, migration, metadata, family, fallback, or UX behavior changed from 0.4.1.
-
 ## Native-Safe Foundation
 
-A Portal Declaration and every Portal Usage are saved as ordinary Unreal Blueprint reroute nodes.
+Portal Inputs and Outputs are saved as ordinary Unreal Blueprint reroute nodes (`UK2Node_Knot`). Portal identity and presentation are editor metadata and Slate behavior layered on top.
 
 With Portal installed:
 
@@ -39,60 +32,60 @@ Underneath, the Blueprint contains native reroutes and a real native wire:
 Source -> Reroute ---------------- Reroute -> Consumer
 ```
 
-Portal's custom Slate presentation hides the internal bridge pin and wire while the plugin is installed. The actual pins are not serialized as hidden.
+Portal hides the internal bridge visually while installed. The actual native pins and connections remain intact.
 
-If Portal is removed, Unreal can display the same saved nodes and connections as ordinary reroutes and wires. Blueprint execution does not depend on Portal code.
+If Portal is removed, the Blueprint falls back to normal reroute nodes and visible wires instead of missing Portal node classes.
 
-## 0.4.2 Features
+## 0.6.0 UX Changes
 
-- Native `UK2Node_Knot` backing nodes for new Portal families.
-- Automatic migration of loaded Portal 0.1 - 0.3 custom nodes to native reroutes.
-- Portal role, family GUID, source graph GUID, name, and color stored in standard package metadata.
-- Human-readable native `NodeComment` fallback markers for metadata recovery and copy/paste recovery.
-- Compact Portal presentation supplied through a graph node factory.
-- Declaration shows only its source input while Portal is installed.
-- Usage shows only its consumer output while Portal is installed.
-- The hidden bridge remains a real native graph connection.
-- Declaration Usage count is shown in the compact node.
-- Declaration and Usage have distinct `D` and `U` badges.
-- Orphaned Usages display a red `Missing` state.
-- Double-click a Usage to jump to its Declaration.
-- `Create Usage` from a Declaration.
-- `Create Another Usage` from a Usage.
-- `Select Portal Family`.
-- `Convert Portal to Reroutes` removes Portal metadata but preserves nodes and connections.
-- Native reroutes can be converted into Portal Declarations.
-- Existing outgoing reroute branches become Portal Usages during conversion.
-- Portal names remain graph-local and unique.
-- Low-frequency editor repair pass restores metadata and copied-family identity when possible.
+- User-facing terms are now **Portal Input** and **Portal Output**.
+- Input icon: `→◉`
+- Output icon: `◉→`
+- Both Input and Output nodes display the same family Output count as a plain number, for example `3`.
+- Input layout is `pin | icon | name | count`.
+- Output layout mirrors it as `count | name | icon | pin`.
+- Portal nodes use a fixed 30-pixel content height so inline rename does not resize the node vertically.
+- Right-click any compatible data output pin and choose `Create Portal` to create and connect a new Portal Input automatically.
+- Execution pins are not supported by Portal. Exec pins do not offer `Create Portal`, exec reroutes do not offer conversion, and any legacy/wildcard Portal that becomes exec-typed safely falls back to native reroutes.
+- Double-click a Portal Output to select and focus its Portal Input.
+- Double-click a Portal Input to select all of its Portal Outputs.
+- Context menu terminology now uses Input and Output.
+- Native fallback comments use `Portal Input: Name` and `Portal Output: Name`.
+- Existing 0.4.x `Portal Declaration:` and `Portal Usage:` fallback comments remain readable and are normalized automatically.
 
-## Creating a Portal in 0.4.2
+## Fast Creation Shortcut
 
-0.4.2 intentionally uses a safety-first creation flow:
+**Shift + R + Left Click** is Portal's fast authoring gesture in Blueprint graphs.
 
-1. Create a normal Blueprint Reroute Node.
-2. Right-click the Reroute Node.
-3. Choose `Convert to Portal Declaration` in the Portal section.
-4. Rename the Declaration inline.
-5. Right-click the Declaration and choose `Create Usage`.
+- With no Portal family member selected, Shift + R + Left Click creates a new Portal Input at the click and begins renaming it.
+- With one Portal Input or Output selected, Shift + R + Left Click creates another Output for that Portal family at the click.
+- The shortcut only runs in editable K2 Blueprint graphs.
+- Plain R + Left Click remains available for Unreal's normal reroute workflow.
 
-If the original reroute already had outgoing branches, Portal creates Usage reroutes for those branches automatically.
+## Context Menu
 
-A direct Portal entry in the Blueprint graph action menu is planned after the native-safe foundation is validated.
+On a normal Blueprint reroute:
 
-## Migration from 0.3.0
+- `Convert to Portal Input`
 
-Portal 0.4.1 keeps the old prototype classes only so existing assets can load long enough to migrate.
+On a Portal Input:
 
-When a loaded Blueprint contains 0.1 - 0.3 Portal nodes, Portal replaces them with native `UK2Node_Knot` nodes, preserves their external links, positions, names, colors, and families, and marks the Blueprint dirty so the native-safe representation can be saved.
+- `Create Output`
+- `Select Portal Family`
+- `Convert Portal to Reroutes`
 
-Open and save prototype Blueprints once with 0.4.1 before testing complete plugin removal.
+On a Portal Output:
+
+- `Jump to Input`
+- `Create Another Output`
+- `Select Portal Family`
+- `Convert Portal to Reroutes`
 
 ## Uninstall Safety
 
-The key 0.4.1 acceptance test is:
+The key safety test remains:
 
-1. Create or migrate a Portal family.
+1. Create a Portal Input and one or more Outputs.
 2. Compile and run the Blueprint.
 3. Save the Blueprint.
 4. Close Unreal Editor.
@@ -108,4 +101,4 @@ Expected result:
 - Blueprint connectivity is preserved
 - Blueprint still compiles and runs
 
-See `Doc/Prototype-Test-Plan.md` for the complete validation pass.
+See `Doc/Prototype-Test-Plan.md` for the validation pass.

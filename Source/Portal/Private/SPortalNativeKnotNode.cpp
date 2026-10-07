@@ -5,12 +5,14 @@
 #include "EdGraph/EdGraphPin.h"
 #include "K2Node_Knot.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "SGraphPanel.h"
 #include "InputCoreTypes.h"
 #include "ScopedTransaction.h"
 #include "SGraphPin.h"
 #include "Styling/AppStyle.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SSpacer.h"
 #include "Widgets/SBoxPanel.h"
 #include "Widgets/Text/SInlineEditableTextBlock.h"
@@ -38,6 +40,102 @@ void SPortalNativeKnotNode::UpdateGraphNode()
         .IsSelected(this, &SPortalNativeKnotNode::IsPortalSelectedExclusively)
         .ColorAndOpacity(this, &SPortalNativeKnotNode::GetPortalTextColor);
 
+    TSharedRef<SHorizontalBox> PortalRow = SNew(SHorizontalBox);
+
+    // Keep both nodes as visual mirrors of one another:
+    // Input  = pin | icon | name | count
+    // Output = count | name | icon | pin
+    if (IsDeclaration())
+    {
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SAssignNew(LeftNodeBox, SVerticalBox)
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(FMargin(4.0f, 0.0f, 3.0f, 0.0f))
+            [
+                SNew(STextBlock)
+                .Text(this, &SPortalNativeKnotNode::GetPortalIcon)
+                .Font(FAppStyle::GetFontStyle("SmallFont"))
+                .ColorAndOpacity(this, &SPortalNativeKnotNode::GetPortalTextColor)
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                InlineEditableText.ToSharedRef()
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(FMargin(4.0f, 0.0f, 4.0f, 0.0f))
+            [
+                SNew(STextBlock)
+                .Text(this, &SPortalNativeKnotNode::GetPortalCountText)
+                .Font(FAppStyle::GetFontStyle("SmallFont"))
+                .ColorAndOpacity(FLinearColor(0.75f, 0.75f, 0.75f, 0.9f))
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SAssignNew(RightNodeBox, SVerticalBox)
+            ];
+    }
+    else
+    {
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SAssignNew(LeftNodeBox, SVerticalBox)
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(FMargin(4.0f, 0.0f, 4.0f, 0.0f))
+            [
+                SNew(STextBlock)
+                .Text(this, &SPortalNativeKnotNode::GetPortalCountText)
+                .Font(FAppStyle::GetFontStyle("SmallFont"))
+                .ColorAndOpacity(FLinearColor(0.75f, 0.75f, 0.75f, 0.9f))
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                InlineEditableText.ToSharedRef()
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            .Padding(FMargin(3.0f, 0.0f, 4.0f, 0.0f))
+            [
+                SNew(STextBlock)
+                .Text(this, &SPortalNativeKnotNode::GetPortalIcon)
+                .Font(FAppStyle::GetFontStyle("SmallFont"))
+                .ColorAndOpacity(this, &SPortalNativeKnotNode::GetPortalTextColor)
+            ];
+
+        PortalRow->AddSlot()
+            .AutoWidth()
+            .VAlign(VAlign_Center)
+            [
+                SAssignNew(RightNodeBox, SVerticalBox)
+            ];
+    }
+
     this->GetOrAddSlot(ENodeZone::Center)
         .HAlign(HAlign_Center)
         .VAlign(VAlign_Center)
@@ -45,52 +143,14 @@ void SPortalNativeKnotNode::UpdateGraphNode()
             SNew(SBorder)
             .BorderImage(FAppStyle::GetBrush("Graph.Node.Body"))
             .BorderBackgroundColor(this, &SPortalNativeKnotNode::GetPortalTint)
-            .Padding(FMargin(5.0f, 2.0f))
+            .Padding(FMargin(5.0f, 0.0f))
             .ToolTipText(this, &SPortalNativeKnotNode::GetPortalTooltip)
             [
-                SNew(SHorizontalBox)
-
-                + SHorizontalBox::Slot()
-                .AutoWidth()
+                SNew(SBox)
+                .HeightOverride(30.0f)
                 .VAlign(VAlign_Center)
                 [
-                    SAssignNew(LeftNodeBox, SVerticalBox)
-                ]
-
-                + SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                .Padding(FMargin(4.0f, 0.0f, 3.0f, 0.0f))
-                [
-                    SNew(STextBlock)
-                    .Text(this, &SPortalNativeKnotNode::GetPortalBadge)
-                    .Font(FAppStyle::GetFontStyle("SmallFont"))
-                    .ColorAndOpacity(this, &SPortalNativeKnotNode::GetPortalTextColor)
-                ]
-
-                + SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                [
-                    InlineEditableText.ToSharedRef()
-                ]
-
-                + SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                .Padding(FMargin(4.0f, 0.0f, 0.0f, 0.0f))
-                [
-                    SNew(STextBlock)
-                    .Text(this, &SPortalNativeKnotNode::GetPortalCountText)
-                    .Font(FAppStyle::GetFontStyle("SmallFont"))
-                    .ColorAndOpacity(FLinearColor(0.75f, 0.75f, 0.75f, 0.9f))
-                ]
-
-                + SHorizontalBox::Slot()
-                .AutoWidth()
-                .VAlign(VAlign_Center)
-                [
-                    SAssignNew(RightNodeBox, SVerticalBox)
+                    PortalRow
                 ]
             ]
         ];
@@ -150,13 +210,36 @@ void SPortalNativeKnotNode::AddPin(const TSharedRef<SGraphPin>& PinToAdd)
 
 FReply SPortalNativeKnotNode::OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent)
 {
-    if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton && IsUsage())
+    if (InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
     {
-        if (UK2Node_Knot* Usage = Cast<UK2Node_Knot>(GraphNode))
+        return SGraphNodeK2Default::OnMouseButtonDoubleClick(InMyGeometry, InMouseEvent);
+    }
+
+    if (UK2Node_Knot* Knot = Cast<UK2Node_Knot>(GraphNode))
+    {
+        if (IsUsage())
         {
-            if (UK2Node_Knot* Declaration = PortalNativeUtils::FindDeclarationForUsage(Usage, true))
+            if (UK2Node_Knot* Declaration = PortalNativeUtils::FindDeclarationForUsage(Knot, true))
             {
                 FKismetEditorUtilities::BringKismetToFocusAttentionOnObject(Declaration, false);
+                return FReply::Handled();
+            }
+        }
+        else if (IsDeclaration())
+        {
+            if (TSharedPtr<SGraphPanel> GraphPanel = GetOwnerPanel())
+            {
+                TArray<UK2Node_Knot*> Usages;
+                PortalNativeUtils::GetUsages(Knot, Usages);
+
+                GraphPanel->SelectionManager.ClearSelectionSet();
+                for (UK2Node_Knot* Usage : Usages)
+                {
+                    if (Usage)
+                    {
+                        GraphPanel->SelectionManager.SetNodeSelection(Usage, true);
+                    }
+                }
                 return FReply::Handled();
             }
         }
@@ -181,26 +264,39 @@ FText SPortalNativeKnotNode::GetPortalTitle() const
     return FText::FromName(Name);
 }
 
-FText SPortalNativeKnotNode::GetPortalBadge() const
+FText SPortalNativeKnotNode::GetPortalIcon() const
 {
     if (IsOrphan())
     {
         return FText::FromString(TEXT("!"));
     }
-    return IsDeclaration() ? FText::FromString(TEXT("D")) : FText::FromString(TEXT("U"));
+
+    // Compact portal glyphs: data enters the ring on an Input and exits the ring on an Output.
+    return IsDeclaration() ? FText::FromString(TEXT("→◉")) : FText::FromString(TEXT("◉→"));
 }
 
 FText SPortalNativeKnotNode::GetPortalCountText() const
 {
     const UK2Node_Knot* Knot = Cast<UK2Node_Knot>(GraphNode);
-    if (!Knot || !IsDeclaration())
+    if (!Knot)
+    {
+        return FText::GetEmpty();
+    }
+
+    const UK2Node_Knot* Declaration = Knot;
+    if (IsUsage())
+    {
+        Declaration = PortalNativeUtils::FindDeclarationForUsage(Knot, false);
+    }
+
+    if (!Declaration)
     {
         return FText::GetEmpty();
     }
 
     TArray<UK2Node_Knot*> Usages;
-    PortalNativeUtils::GetUsages(Knot, Usages);
-    return Usages.IsEmpty() ? FText::GetEmpty() : FText::Format(NSLOCTEXT("Portal", "UsageCount", "x{0}"), FText::AsNumber(Usages.Num()));
+    PortalNativeUtils::GetUsages(Declaration, Usages);
+    return Usages.IsEmpty() ? FText::GetEmpty() : FText::AsNumber(Usages.Num());
 }
 
 FText SPortalNativeKnotNode::GetPortalTooltip() const
@@ -213,17 +309,17 @@ FText SPortalNativeKnotNode::GetPortalTooltip() const
 
     if (IsOrphan())
     {
-        return NSLOCTEXT("Portal", "OrphanTooltip", "This Portal Usage has no valid Declaration. Convert it to a regular reroute or reconnect it to a Declaration.");
+        return NSLOCTEXT("Portal", "OrphanTooltip", "This Portal Output has no valid Input. Convert it to a regular reroute or reconnect it to an Input.");
     }
 
     if (IsDeclaration())
     {
         TArray<UK2Node_Knot*> Usages;
         PortalNativeUtils::GetUsages(Knot, Usages);
-        return FText::Format(NSLOCTEXT("Portal", "DeclarationTooltip", "Portal Declaration. {0} linked Usage(s). The saved node is a native Blueprint reroute."), FText::AsNumber(Usages.Num()));
+        return FText::Format(NSLOCTEXT("Portal", "DeclarationTooltip", "Portal Input. {0} linked Output(s). Double-click to select all Outputs. The saved node is a native Blueprint reroute."), FText::AsNumber(Usages.Num()));
     }
 
-    return NSLOCTEXT("Portal", "UsageTooltip", "Portal Usage. Double-click to jump to its Declaration. The saved node is a native Blueprint reroute.");
+    return NSLOCTEXT("Portal", "UsageTooltip", "Portal Output. Double-click to jump to its Input. The saved node is a native Blueprint reroute.");
 }
 
 FSlateColor SPortalNativeKnotNode::GetPortalTint() const

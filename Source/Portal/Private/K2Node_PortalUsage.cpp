@@ -85,7 +85,7 @@ void UK2Node_PortalUsage::ExpandNode(FKismetCompilerContext& CompilerContext, UE
     if (!ResolveDeclaration(false))
     {
         const FString PortalLabel = CachedPortalName.IsNone() ? TEXT("Unknown") : CachedPortalName.ToString();
-        CompilerContext.MessageLog.Error(*FString::Printf(TEXT("Portal Usage @@ for '%s' has no valid Declaration."), *PortalLabel), this);
+        CompilerContext.MessageLog.Error(*FString::Printf(TEXT("Portal Output @@ for '%s' has no valid Input."), *PortalLabel), this);
         BreakAllNodeLinks();
         return;
     }
@@ -113,7 +113,7 @@ FText UK2Node_PortalUsage::GetTooltipText() const
     if (IsDeclarationValid())
     {
         return FText::Format(
-            LOCTEXT("PortalUsageTooltip", "Portal Usage for '{0}'. Double-click to jump to its Declaration."),
+            LOCTEXT("PortalUsageTooltip", "Portal Output for '{0}'. Double-click to jump to its Input."),
             FText::FromName(Declaration->PortalName)
         );
     }
@@ -121,12 +121,12 @@ FText UK2Node_PortalUsage::GetTooltipText() const
     if (!CachedPortalName.IsNone())
     {
         return FText::Format(
-            LOCTEXT("MissingNamedPortalTooltip", "This Portal Usage was linked to '{0}', but its Declaration is missing from this graph."),
+            LOCTEXT("MissingNamedPortalTooltip", "This Portal Output was linked to '{0}', but its Input is missing from this graph."),
             FText::FromName(CachedPortalName)
         );
     }
 
-    return LOCTEXT("MissingPortalTooltip", "This Portal Usage no longer has a valid Declaration in this graph.");
+    return LOCTEXT("MissingPortalTooltip", "This Portal Output no longer has a valid Input in this graph.");
 }
 
 FLinearColor UK2Node_PortalUsage::GetNodeTitleColor() const
@@ -165,8 +165,8 @@ void UK2Node_PortalUsage::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeC
     FToolMenuSection& Section = Menu->AddSection(TEXT("Portal"), LOCTEXT("PortalContextSection", "Portal"));
     Section.AddMenuEntry(
         TEXT("PortalJumpToDeclaration"),
-        LOCTEXT("PortalJumpToDeclarationLabel", "Jump to Declaration"),
-        LOCTEXT("PortalJumpToDeclarationTooltip", "Focuses this Usage's Declaration."),
+        LOCTEXT("PortalJumpToDeclarationLabel", "Jump to Input"),
+        LOCTEXT("PortalJumpToDeclarationTooltip", "Focuses this Output's Input."),
         FSlateIcon(),
         FUIAction(
             FExecuteAction::CreateLambda([WeakUsage]()
@@ -189,8 +189,8 @@ void UK2Node_PortalUsage::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeC
 
     Section.AddMenuEntry(
         TEXT("PortalCreateAnotherUsage"),
-        LOCTEXT("PortalCreateAnotherUsageLabel", "Create Another Usage"),
-        LOCTEXT("PortalCreateAnotherUsageTooltip", "Creates another Usage for the same Portal."),
+        LOCTEXT("PortalCreateAnotherUsageLabel", "Create Another Output"),
+        LOCTEXT("PortalCreateAnotherUsageTooltip", "Creates another Output for the same Portal."),
         FSlateIcon(),
         FUIAction(
             FExecuteAction::CreateLambda([WeakUsage]()
@@ -214,7 +214,7 @@ void UK2Node_PortalUsage::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeC
     Section.AddMenuEntry(
         TEXT("PortalSelectFamily"),
         LOCTEXT("PortalSelectFamilyLabel", "Select Portal Family"),
-        LOCTEXT("PortalSelectFamilyTooltip", "Selects the Declaration and all Usages for this Portal."),
+        LOCTEXT("PortalSelectFamilyTooltip", "Selects the Input and all Outputs for this Portal."),
         FSlateIcon(),
         FUIAction(
             FExecuteAction::CreateLambda([WeakUsage]()

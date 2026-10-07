@@ -25,8 +25,10 @@ namespace PortalNativeUtils
         const FName NameKey(TEXT("Portal.Name"));
         const FName ColorKey(TEXT("Portal.Color"));
 
-        const TCHAR* DeclarationPrefix = TEXT("Portal Declaration: ");
-        const TCHAR* UsagePrefix = TEXT("Portal Usage: ");
+        const TCHAR* InputPrefix = TEXT("Portal Input: ");
+        const TCHAR* OutputPrefix = TEXT("Portal Output: ");
+        const TCHAR* LegacyDeclarationPrefix = TEXT("Portal Declaration: ");
+        const TCHAR* LegacyUsagePrefix = TEXT("Portal Usage: ");
 
         FString RoleToString(EPortalKnotRole Role)
         {
@@ -175,7 +177,7 @@ namespace PortalNativeUtils
     FString MakeFallbackComment(EPortalKnotRole Role, FName Name)
     {
         const FString CleanName = Name.IsNone() ? TEXT("Portal") : Name.ToString();
-        return FString(Role == EPortalKnotRole::Usage ? UsagePrefix : DeclarationPrefix) + CleanName;
+        return FString(Role == EPortalKnotRole::Usage ? OutputPrefix : InputPrefix) + CleanName;
     }
 
     bool ParseFallbackComment(const FString& Comment, EPortalKnotRole& OutRole, FName& OutName)
@@ -183,17 +185,32 @@ namespace PortalNativeUtils
         OutRole = EPortalKnotRole::None;
         OutName = NAME_None;
 
-        if (Comment.StartsWith(DeclarationPrefix, ESearchCase::CaseSensitive))
+        if (Comment.StartsWith(InputPrefix, ESearchCase::CaseSensitive))
         {
             OutRole = EPortalKnotRole::Declaration;
-            OutName = FName(*Comment.RightChop(FCString::Strlen(DeclarationPrefix)).TrimStartAndEnd());
+            OutName = FName(*Comment.RightChop(FCString::Strlen(InputPrefix)).TrimStartAndEnd());
             return true;
         }
 
-        if (Comment.StartsWith(UsagePrefix, ESearchCase::CaseSensitive))
+        if (Comment.StartsWith(OutputPrefix, ESearchCase::CaseSensitive))
         {
             OutRole = EPortalKnotRole::Usage;
-            OutName = FName(*Comment.RightChop(FCString::Strlen(UsagePrefix)).TrimStartAndEnd());
+            OutName = FName(*Comment.RightChop(FCString::Strlen(OutputPrefix)).TrimStartAndEnd());
+            return true;
+        }
+
+        // Backward compatibility with 0.4.x fallback comments.
+        if (Comment.StartsWith(LegacyDeclarationPrefix, ESearchCase::CaseSensitive))
+        {
+            OutRole = EPortalKnotRole::Declaration;
+            OutName = FName(*Comment.RightChop(FCString::Strlen(LegacyDeclarationPrefix)).TrimStartAndEnd());
+            return true;
+        }
+
+        if (Comment.StartsWith(LegacyUsagePrefix, ESearchCase::CaseSensitive))
+        {
+            OutRole = EPortalKnotRole::Usage;
+            OutName = FName(*Comment.RightChop(FCString::Strlen(LegacyUsagePrefix)).TrimStartAndEnd());
             return true;
         }
 
@@ -498,9 +515,129 @@ namespace PortalNativeUtils
         }
     }
 
+    UK2Node_Knot* CreatePortalInput(UEdGraph* Graph, const FVector2f& Position)
+    {
+        if (!Graph || !Graph->GetSchema() || !Graph->GetSchema()->IsA<UEdGraphSchema_K2>())
+        {
+            return nullptr;
+        }
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "CreatePortalInput", "Create Portal Input"));
+        Graph->Modify();
+
+        UK2Node_Knot* Input = CreateKnot(Graph, Position);
+        if (!Input)
+        {
+            return nullptr;
+        }
+
+        FPortalKnotData Data;
+        Data.Role = EPortalKnotRole::Declaration;
+        Data.FamilyGuid = FGuid::NewGuid();
+        Data.SourceGraphGuid = Graph->GraphGuid;
+        Data.Name = MakeUniqueName(Graph, FName(TEXT("Portal")), Input);
+        Data.Color = FLinearColor(0.08f, 0.42f, 0.75f, 1.0f);
+        WritePortalData(Input, Data, true);
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        return Input;
+    }
+
+    bool CanCreatePortalFromOutputPin(const UEdGraphPin* SourcePin)
+    {
+        if (!SourcePin || SourcePin->Direction != EGPD_Output || !SourcePin->GetOwningNode())
+        {
+            return false;
+        }
+
+        const UEdGraph* Graph = SourcePin->GetOwningNode()->GetGraph();
+        if (!Graph || !Graph->GetSchema() || !Graph->GetSchema()->IsA<UEdGraphSchema_K2>())
+        {
+            return false;
+        }
+
+        return SourcePin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec;
+    }
+
+    UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin)
+    {
+        if (!CanCreatePortalFromOutputPin(SourcePin))
+        {
+            return nullptr;
+        }
+
+        UEdGraphNode* SourceNode = SourcePin->GetOwningNode();
+        UEdGraph* Graph = SourceNode ? SourceNode->GetGraph() : nullptr;
+        if (!Graph)
+        {
+            return nullptr;
+        }
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "CreatePortalFromPin", "Create Portal"));
+        Graph->Modify();
+        SourceNode->Modify();
+
+        const FVector2f Position(
+            static_cast<float>(SourceNode->NodePosX + 260),
+            static_cast<float>(SourceNode->NodePosY));
+
+        UK2Node_Knot* Input = CreateKnot(Graph, Position);
+        if (!Input)
+        {
+            return nullptr;
+        }
+
+        FString SuggestedName;
+        if (!SourcePin->PinFriendlyName.IsEmpty())
+        {
+            SuggestedName = SourcePin->PinFriendlyName.ToString().TrimStartAndEnd();
+        }
+        if (SuggestedName.IsEmpty())
+        {
+            SuggestedName = SourcePin->PinName.ToString().TrimStartAndEnd();
+        }
+
+        const bool bGenericReturnName = SuggestedName.Equals(TEXT("Return Value"), ESearchCase::IgnoreCase) ||
+            SuggestedName.Equals(TEXT("ReturnValue"), ESearchCase::IgnoreCase) ||
+            SuggestedName.Equals(TEXT("Result"), ESearchCase::IgnoreCase);
+        if (SuggestedName.IsEmpty() || bGenericReturnName)
+        {
+            SuggestedName = SourceNode->GetNodeTitle(ENodeTitleType::ListView).ToString().TrimStartAndEnd();
+            SuggestedName.RemoveFromStart(TEXT("Get "));
+        }
+        if (SuggestedName.IsEmpty())
+        {
+            SuggestedName = TEXT("Portal");
+        }
+
+        FPortalKnotData Data;
+        Data.Role = EPortalKnotRole::Declaration;
+        Data.FamilyGuid = FGuid::NewGuid();
+        Data.SourceGraphGuid = Graph->GraphGuid;
+        Data.Name = MakeUniqueName(Graph, FName(*SuggestedName), Input);
+        Data.Color = FLinearColor(0.08f, 0.42f, 0.75f, 1.0f);
+        WritePortalData(Input, Data, true);
+
+        if (const UEdGraphSchema* Schema = Graph->GetSchema())
+        {
+            if (!Schema->TryCreateConnection(SourcePin, Input->GetInputPin()))
+            {
+                ClearPortalData(Input, false);
+                Graph->RemoveNode(Input);
+                Graph->NotifyGraphChanged();
+                return nullptr;
+            }
+        }
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        return Input;
+    }
+
     UK2Node_Knot* CreateUsage(UK2Node_Knot* Declaration, const FVector2f* OptionalPosition)
     {
-        if (!Declaration || GetRole(Declaration) != EPortalKnotRole::Declaration || !Declaration->GetGraph())
+        if (!Declaration || GetRole(Declaration) != EPortalKnotRole::Declaration || !Declaration->GetGraph() || IsExecKnot(Declaration))
         {
             return nullptr;
         }
@@ -514,7 +651,7 @@ namespace PortalNativeUtils
         UEdGraph* Graph = Declaration->GetGraph();
         const FVector2f Position = OptionalPosition ? *OptionalPosition : FVector2f(Declaration->NodePosX + 240.0f, Declaration->NodePosY + 72.0f);
 
-        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "CreateUsage", "Create Portal Usage"));
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "CreateUsage", "Create Portal Output"));
         Graph->Modify();
         Declaration->Modify();
 
@@ -769,6 +906,73 @@ namespace PortalNativeUtils
             }
         }
 
+        // Portal is intentionally data-only. Native UK2Node_Knot execution reroutes
+        // have single-path execution semantics, so a one-input/many-output Portal family
+        // would be ambiguous and can leave detached wildcard Outputs. If an old Portal or
+        // a wildcard Portal becomes exec-typed, safely demote the whole family back to
+        // ordinary native reroutes.
+        TSet<FGuid> ExecFamilies;
+        TArray<UK2Node_Knot*> ExecOrphans;
+        for (UK2Node_Knot* Knot : Knots)
+        {
+            if (!Knot || !IsPortalKnot(Knot) || !IsExecKnot(Knot))
+            {
+                continue;
+            }
+
+            FPortalKnotData Data;
+            if (ReadPortalData(Knot, Data) && Data.FamilyGuid.IsValid())
+            {
+                ExecFamilies.Add(Data.FamilyGuid);
+            }
+            else
+            {
+                ExecOrphans.Add(Knot);
+            }
+        }
+
+        for (const FGuid& FamilyGuid : ExecFamilies)
+        {
+            UK2Node_Knot* Declaration = FindDeclaration(Graph, FamilyGuid);
+            if (Declaration)
+            {
+                TArray<UK2Node_Knot*> FamilyUsages;
+                GetUsages(Declaration, FamilyUsages);
+                ClearPortalData(Declaration, true);
+                for (UK2Node_Knot* Usage : FamilyUsages)
+                {
+                    ClearPortalData(Usage, true);
+                }
+                bChanged = true;
+            }
+            else
+            {
+                for (UK2Node_Knot* Knot : Knots)
+                {
+                    FPortalKnotData Data;
+                    if (Knot && ReadPortalData(Knot, Data) && Data.FamilyGuid == FamilyGuid)
+                    {
+                        ClearPortalData(Knot, true);
+                        bChanged = true;
+                    }
+                }
+            }
+        }
+
+        for (UK2Node_Knot* Knot : ExecOrphans)
+        {
+            ClearPortalData(Knot, true);
+            bChanged = true;
+        }
+
+        if (!ExecFamilies.IsEmpty() || !ExecOrphans.IsEmpty())
+        {
+            Knots.RemoveAll([](const UK2Node_Knot* Knot)
+            {
+                return !Knot || !IsPortalKnot(Knot);
+            });
+        }
+
         // First materialize metadata for nodes recovered from the native comment fallback.
         for (UK2Node_Knot* Knot : Knots)
         {
@@ -779,7 +983,7 @@ namespace PortalNativeUtils
                 continue;
             }
 
-            bool bNeedsWrite = false;
+            bool bNeedsWrite = Knot->NodeComment != MakeFallbackComment(Data.Role, Data.Name);
             if (Data.Role == EPortalKnotRole::Declaration && !Data.FamilyGuid.IsValid())
             {
                 Data.FamilyGuid = FGuid::NewGuid();
