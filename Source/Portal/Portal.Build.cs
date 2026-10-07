@@ -21,6 +21,7 @@ public class Portal : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
+                "InputCore",
                 "Slate",
                 "SlateCore",
                 "ToolMenus",

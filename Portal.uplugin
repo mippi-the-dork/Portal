@@ -1,9 +1,9 @@
 {
     "FileVersion": 3,
-    "Version": 5,
-    "VersionName": "0.3.0",
+    "Version": 8,
+    "VersionName": "0.4.2",
     "FriendlyName": "Portal",
-    "Description": "Named Reroute-style Portal nodes for Unreal Engine Blueprints with compact authoring UX.",
+    "Description": "Named Reroute-style Blueprint Portals backed by native reroute nodes for safe fallback.",
     "Category": "Blueprints",
     "CreatedBy": "Mippithedork",
     "EngineVersion": "5.8.0",

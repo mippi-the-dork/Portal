@@ -157,13 +157,8 @@ bool UK2Node_PortalDeclaration::ShouldDrawNodeAsControlPointOnly(int32& OutInput
 
 void UK2Node_PortalDeclaration::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
-    UClass* ActionKey = GetClass();
-    if (ActionRegistrar.IsOpenForRegistration(ActionKey))
-    {
-        UBlueprintNodeSpawner* NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
-        check(NodeSpawner != nullptr);
-        ActionRegistrar.AddBlueprintAction(ActionKey, NodeSpawner);
-    }
+    // Legacy 0.1-0.3 node class retained only so existing assets can load and
+    // migrate to native UK2Node_Knot-backed Portals. New legacy nodes are not exposed.
 }
 
 void UK2Node_PortalDeclaration::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeContextMenuContext* Context) const
