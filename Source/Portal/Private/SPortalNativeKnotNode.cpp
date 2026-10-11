@@ -296,7 +296,7 @@ FText SPortalNativeKnotNode::GetPortalCountText() const
 
     TArray<UK2Node_Knot*> Usages;
     PortalNativeUtils::GetUsages(Declaration, Usages);
-    return Usages.IsEmpty() ? FText::GetEmpty() : FText::AsNumber(Usages.Num());
+    return FText::AsNumber(Usages.Num());
 }
 
 FText SPortalNativeKnotNode::GetPortalTooltip() const
@@ -309,17 +309,22 @@ FText SPortalNativeKnotNode::GetPortalTooltip() const
 
     if (IsOrphan())
     {
-        return NSLOCTEXT("Portal", "OrphanTooltip", "This Portal Output has no valid Input. Convert it to a regular reroute or reconnect it to an Input.");
+        return NSLOCTEXT("Portal", "OrphanTooltip", "This Portal Output has no valid Input. Right-click to reconnect it, create the missing Input, or convert it to a regular reroute.");
     }
 
     if (IsDeclaration())
     {
         TArray<UK2Node_Knot*> Usages;
         PortalNativeUtils::GetUsages(Knot, Usages);
-        return FText::Format(NSLOCTEXT("Portal", "DeclarationTooltip", "Portal Input. {0} linked Output(s). Double-click to select all Outputs. The saved node is a native Blueprint reroute."), FText::AsNumber(Usages.Num()));
+        return FText::Format(
+            NSLOCTEXT("Portal", "DeclarationTooltip", "Portal Input '{0}'. {1} linked Output(s). Double-click to select all Outputs. The saved node is a native Blueprint reroute."),
+            FText::FromName(PortalNativeUtils::GetPortalName(Knot)),
+            FText::AsNumber(Usages.Num()));
     }
 
-    return NSLOCTEXT("Portal", "UsageTooltip", "Portal Output. Double-click to jump to its Input. The saved node is a native Blueprint reroute.");
+    return FText::Format(
+        NSLOCTEXT("Portal", "UsageTooltip", "Portal Output for '{0}'. Double-click to jump to its Input. The saved node is a native Blueprint reroute."),
+        FText::FromName(PortalNativeUtils::GetPortalName(Knot)));
 }
 
 FSlateColor SPortalNativeKnotNode::GetPortalTint() const

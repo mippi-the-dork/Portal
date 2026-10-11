@@ -2,6 +2,7 @@
 
 #include "PortalNativeUtils.h"
 
+#include "BlueprintActionDatabase.h"
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphSchema_K2.h"
@@ -29,6 +30,15 @@ namespace PortalNativeUtils
         const TCHAR* OutputPrefix = TEXT("Portal Output: ");
         const TCHAR* LegacyDeclarationPrefix = TEXT("Portal Declaration: ");
         const TCHAR* LegacyUsagePrefix = TEXT("Portal Usage: ");
+
+        void RefreshPortalActions()
+        {
+            if (GIsEditor)
+            {
+                FBlueprintActionDatabase::Get().RefreshClassActions(UK2Node_PortalDeclaration::StaticClass());
+                FBlueprintActionDatabase::Get().RefreshClassActions(UK2Node_PortalUsage::StaticClass());
+            }
+        }
 
         FString RoleToString(EPortalKnotRole Role)
         {
@@ -476,6 +486,213 @@ namespace PortalNativeUtils
         return GetRole(Usage) == EPortalKnotRole::Usage && FindDeclarationForUsage(Usage, false) == nullptr;
     }
 
+    bool CanRetargetUsageToDeclaration(const UK2Node_Knot* Usage, const UK2Node_Knot* NewDeclaration)
+    {
+        if (!Usage || !NewDeclaration || Usage == NewDeclaration ||
+            GetRole(Usage) != EPortalKnotRole::Usage ||
+            GetRole(NewDeclaration) != EPortalKnotRole::Declaration ||
+            !Usage->GetGraph() || Usage->GetGraph() != NewDeclaration->GetGraph() ||
+            IsExecKnot(Usage) || IsExecKnot(NewDeclaration))
+        {
+            return false;
+        }
+
+        FPortalKnotData UsageData;
+        FPortalKnotData DeclarationData;
+        if (!ReadPortalData(Usage, UsageData) || !ReadPortalData(NewDeclaration, DeclarationData))
+        {
+            return false;
+        }
+
+        if (UsageData.FamilyGuid.IsValid() && UsageData.FamilyGuid == DeclarationData.FamilyGuid)
+        {
+            return false;
+        }
+
+        const UEdGraphSchema* Schema = Usage->GetSchema();
+        const UEdGraphPin* DeclarationOutput = NewDeclaration->GetOutputPin();
+        const UEdGraphPin* UsageInput = Usage->GetInputPin();
+        const UEdGraphPin* UsageOutput = Usage->GetOutputPin();
+        if (!Schema || !DeclarationOutput || !UsageInput || !UsageOutput)
+        {
+            return false;
+        }
+
+        // Prefer validating against the Output's real consumers. This avoids the current
+        // family's pin type making a compatible wildcard target look incompatible.
+        if (!UsageOutput->LinkedTo.IsEmpty())
+        {
+            for (const UEdGraphPin* TargetPin : UsageOutput->LinkedTo)
+            {
+                if (!TargetPin || Schema->CanCreateConnection(DeclarationOutput, TargetPin).Response == CONNECT_RESPONSE_DISALLOW)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return Schema->CanCreateConnection(DeclarationOutput, UsageInput).Response != CONNECT_RESPONSE_DISALLOW;
+    }
+
+    bool RetargetUsage(UK2Node_Knot* Usage, UK2Node_Knot* NewDeclaration)
+    {
+        if (!CanRetargetUsageToDeclaration(Usage, NewDeclaration))
+        {
+            return false;
+        }
+
+        UEdGraph* Graph = Usage->GetGraph();
+        const UEdGraphSchema* Schema = Usage->GetSchema();
+        if (!Graph || !Schema)
+        {
+            return false;
+        }
+
+        UK2Node_Knot* OldDeclaration = FindDeclarationForUsage(Usage, false);
+        FPortalKnotData NewData;
+        if (!ReadPortalData(NewDeclaration, NewData))
+        {
+            return false;
+        }
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "RetargetPortalOutput", "Change Portal Input"));
+        Graph->Modify();
+        Usage->Modify();
+        NewDeclaration->Modify();
+        if (OldDeclaration)
+        {
+            OldDeclaration->Modify();
+        }
+
+        UEdGraphPin* UsageInput = Usage->GetInputPin();
+        if (!UsageInput)
+        {
+            return false;
+        }
+
+        UsageInput->BreakAllPinLinks();
+        if (!Schema->TryCreateConnection(NewDeclaration->GetOutputPin(), UsageInput))
+        {
+            if (OldDeclaration)
+            {
+                Schema->TryCreateConnection(OldDeclaration->GetOutputPin(), UsageInput);
+            }
+            return false;
+        }
+
+        NewData.Role = EPortalKnotRole::Usage;
+        NewData.SourceGraphGuid = Graph->GraphGuid;
+        WritePortalData(Usage, NewData, true);
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
+        return true;
+    }
+
+    UK2Node_Knot* CreateMissingInputForUsage(UK2Node_Knot* Usage)
+    {
+        if (!Usage || !IsOrphanUsage(Usage) || !Usage->GetGraph() || IsExecKnot(Usage))
+        {
+            return nullptr;
+        }
+
+        FPortalKnotData UsageData;
+        if (!ReadPortalData(Usage, UsageData))
+        {
+            return nullptr;
+        }
+
+        UEdGraph* Graph = Usage->GetGraph();
+        const UEdGraphSchema* Schema = Graph->GetSchema();
+        if (!Schema)
+        {
+            return nullptr;
+        }
+
+        // Capture the orphan family before creating the replacement Input. Once the new
+        // declaration exists, GUID lookup can resolve it even before the physical bridge
+        // connections have been restored.
+        TArray<UK2Node_Knot*> FamilyOutputs;
+        for (UEdGraphNode* Node : Graph->Nodes)
+        {
+            UK2Node_Knot* Candidate = Cast<UK2Node_Knot>(Node);
+            FPortalKnotData CandidateData;
+            if (!Candidate || !ReadPortalData(Candidate, CandidateData) || CandidateData.Role != EPortalKnotRole::Usage)
+            {
+                continue;
+            }
+
+            const bool bSameFamily = UsageData.FamilyGuid.IsValid()
+                ? CandidateData.FamilyGuid == UsageData.FamilyGuid
+                : Candidate == Usage;
+            if (bSameFamily && FindDeclarationForUsage(Candidate, false) == nullptr)
+            {
+                FamilyOutputs.Add(Candidate);
+            }
+        }
+
+        if (!FamilyOutputs.Contains(Usage))
+        {
+            FamilyOutputs.Add(Usage);
+        }
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "CreateMissingPortalInput", "Create Missing Portal Input"));
+        Graph->Modify();
+
+        FPortalKnotData InputData = UsageData;
+        InputData.Role = EPortalKnotRole::Declaration;
+        if (!InputData.FamilyGuid.IsValid())
+        {
+            InputData.FamilyGuid = FGuid::NewGuid();
+        }
+        InputData.SourceGraphGuid = Graph->GraphGuid;
+
+        UK2Node_Knot* Input = CreateKnot(Graph, FVector2f(Usage->NodePosX - 240.0f, Usage->NodePosY));
+        if (!Input)
+        {
+            return nullptr;
+        }
+
+        InputData.Name = MakeUniqueName(Graph, InputData.Name, Input);
+        WritePortalData(Input, InputData, true);
+
+        int32 ConnectedCount = 0;
+        for (UK2Node_Knot* Output : FamilyOutputs)
+        {
+            if (!Output || !Output->GetInputPin())
+            {
+                continue;
+            }
+
+            Output->Modify();
+            Output->GetInputPin()->BreakAllPinLinks();
+            if (!Schema->TryCreateConnection(Input->GetOutputPin(), Output->GetInputPin()))
+            {
+                continue;
+            }
+
+            FPortalKnotData OutputData = InputData;
+            OutputData.Role = EPortalKnotRole::Usage;
+            WritePortalData(Output, OutputData, true);
+            ++ConnectedCount;
+        }
+
+        if (ConnectedCount == 0)
+        {
+            ClearPortalData(Input, false);
+            Graph->RemoveNode(Input);
+            Graph->NotifyGraphChanged();
+            return nullptr;
+        }
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
+        return Input;
+    }
+
     void SetPortalName(UK2Node_Knot* Declaration, const FName& RequestedName)
     {
         if (!Declaration || GetRole(Declaration) != EPortalKnotRole::Declaration)
@@ -512,7 +729,73 @@ namespace PortalNativeUtils
         {
             Graph->NotifyGraphChanged();
             MarkBlueprintModified(Graph, false);
+            RefreshPortalActions();
         }
+    }
+
+    bool InitializeSpawnedPortalInput(UK2Node_Knot* Knot, FName PreferredName)
+    {
+        if (!Knot || !Knot->GetGraph() || IsPortalKnot(Knot) || IsExecKnot(Knot))
+        {
+            return false;
+        }
+
+        UEdGraph* Graph = Knot->GetGraph();
+        if (!Graph->GetSchema() || !Graph->GetSchema()->IsA<UEdGraphSchema_K2>())
+        {
+            return false;
+        }
+
+        FPortalKnotData Data;
+        Data.Role = EPortalKnotRole::Declaration;
+        Data.FamilyGuid = FGuid::NewGuid();
+        Data.SourceGraphGuid = Graph->GraphGuid;
+        Data.Name = MakeUniqueName(Graph, PreferredName.IsNone() ? FName(TEXT("Portal")) : PreferredName, Knot);
+        Data.Color = FLinearColor(0.08f, 0.42f, 0.75f, 1.0f);
+        WritePortalData(Knot, Data, true);
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
+        return true;
+    }
+
+    bool InitializeSpawnedPortalOutput(UK2Node_Knot* Knot, UK2Node_Knot* Declaration)
+    {
+        if (!Knot || !Declaration || Knot == Declaration || !Knot->GetGraph() ||
+            Knot->GetGraph() != Declaration->GetGraph() || IsPortalKnot(Knot) || IsExecKnot(Knot) || IsExecKnot(Declaration) ||
+            GetRole(Declaration) != EPortalKnotRole::Declaration)
+        {
+            return false;
+        }
+
+        FPortalKnotData Data;
+        if (!ReadPortalData(Declaration, Data))
+        {
+            return false;
+        }
+
+        UEdGraph* Graph = Knot->GetGraph();
+        const UEdGraphSchema* Schema = Graph->GetSchema();
+        if (!Schema || !Knot->GetInputPin() || !Declaration->GetOutputPin())
+        {
+            return false;
+        }
+
+        Data.Role = EPortalKnotRole::Usage;
+        Data.SourceGraphGuid = Graph->GraphGuid;
+        WritePortalData(Knot, Data, true);
+
+        if (!Schema->TryCreateConnection(Declaration->GetOutputPin(), Knot->GetInputPin()))
+        {
+            ClearPortalData(Knot, false);
+            return false;
+        }
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
+        return true;
     }
 
     UK2Node_Knot* CreatePortalInput(UEdGraph* Graph, const FVector2f& Position)
@@ -541,6 +824,7 @@ namespace PortalNativeUtils
 
         Graph->NotifyGraphChanged();
         MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
         return Input;
     }
 
@@ -560,7 +844,7 @@ namespace PortalNativeUtils
         return SourcePin->PinType.PinCategory != UEdGraphSchema_K2::PC_Exec;
     }
 
-    UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin)
+    UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin, const FVector2f* OptionalPinPosition)
     {
         if (!CanCreatePortalFromOutputPin(SourcePin))
         {
@@ -578,9 +862,11 @@ namespace PortalNativeUtils
         Graph->Modify();
         SourceNode->Modify();
 
-        const FVector2f Position(
-            static_cast<float>(SourceNode->NodePosX + 260),
-            static_cast<float>(SourceNode->NodePosY));
+        const FVector2f Position = OptionalPinPosition
+            ? (*OptionalPinPosition + FVector2f(42.0f, -15.0f))
+            : FVector2f(
+                static_cast<float>(SourceNode->NodePosX + 260),
+                static_cast<float>(SourceNode->NodePosY));
 
         UK2Node_Knot* Input = CreateKnot(Graph, Position);
         if (!Input)
@@ -632,7 +918,88 @@ namespace PortalNativeUtils
 
         Graph->NotifyGraphChanged();
         MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
         return Input;
+    }
+
+    bool CanConnectPortalToInputPin(const UK2Node_Knot* Declaration, const UEdGraphPin* TargetPin)
+    {
+        if (!Declaration || GetRole(Declaration) != EPortalKnotRole::Declaration || !TargetPin ||
+            TargetPin->Direction != EGPD_Input || !TargetPin->GetOwningNode() || !TargetPin->LinkedTo.IsEmpty() ||
+            Declaration->GetGraph() != TargetPin->GetOwningNode()->GetGraph() || IsExecKnot(Declaration) ||
+            TargetPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+        {
+            return false;
+        }
+
+        const UEdGraphSchema* Schema = Declaration->GetSchema();
+        const UEdGraphPin* SourcePin = Declaration->GetOutputPin();
+        if (!Schema || !SourcePin)
+        {
+            return false;
+        }
+
+        const FPinConnectionResponse Response = Schema->CanCreateConnection(SourcePin, TargetPin);
+        return Response.Response != CONNECT_RESPONSE_DISALLOW;
+    }
+
+    UK2Node_Knot* CreateUsageAndConnectToInputPin(UK2Node_Knot* Declaration, UEdGraphPin* TargetPin, const FVector2f* OptionalPinPosition)
+    {
+        if (!CanConnectPortalToInputPin(Declaration, TargetPin))
+        {
+            return nullptr;
+        }
+
+        FPortalKnotData DeclarationData;
+        if (!ReadPortalData(Declaration, DeclarationData))
+        {
+            return nullptr;
+        }
+
+        UEdGraphNode* TargetNode = TargetPin->GetOwningNode();
+        UEdGraph* Graph = Declaration->GetGraph();
+        if (!TargetNode || !Graph)
+        {
+            return nullptr;
+        }
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "ConnectPortalOutput", "Connect Portal Output"));
+        Graph->Modify();
+        Declaration->Modify();
+        TargetNode->Modify();
+
+        const FVector2f Position = OptionalPinPosition
+            ? (*OptionalPinPosition + FVector2f(-220.0f, -15.0f))
+            : FVector2f(
+                static_cast<float>(TargetNode->NodePosX - 220),
+                static_cast<float>(TargetNode->NodePosY));
+
+        UK2Node_Knot* Usage = CreateKnot(Graph, Position);
+        if (!Usage)
+        {
+            return nullptr;
+        }
+
+        FPortalKnotData UsageData = DeclarationData;
+        UsageData.Role = EPortalKnotRole::Usage;
+        UsageData.SourceGraphGuid = Graph->GraphGuid;
+        WritePortalData(Usage, UsageData, true);
+
+        const UEdGraphSchema* Schema = Graph->GetSchema();
+        const bool bBridgeConnected = Schema && Schema->TryCreateConnection(Declaration->GetOutputPin(), Usage->GetInputPin());
+        const bool bTargetConnected = bBridgeConnected && Schema->TryCreateConnection(Usage->GetOutputPin(), TargetPin);
+        if (!bTargetConnected)
+        {
+            ClearPortalData(Usage, false);
+            Graph->RemoveNode(Usage);
+            Graph->NotifyGraphChanged();
+            return nullptr;
+        }
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
+        return Usage;
     }
 
     UK2Node_Knot* CreateUsage(UK2Node_Knot* Declaration, const FVector2f* OptionalPosition)
@@ -673,6 +1040,7 @@ namespace PortalNativeUtils
 
         Graph->NotifyGraphChanged();
         MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
         return Usage;
     }
 
@@ -736,6 +1104,7 @@ namespace PortalNativeUtils
 
         Graph->NotifyGraphChanged();
         MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
         return true;
     }
 
@@ -754,6 +1123,7 @@ namespace PortalNativeUtils
             {
                 AnyFamilyNode->GetGraph()->NotifyGraphChanged();
                 MarkBlueprintModified(AnyFamilyNode->GetGraph(), false);
+                RefreshPortalActions();
             }
             return;
         }
@@ -777,7 +1147,58 @@ namespace PortalNativeUtils
         {
             Graph->NotifyGraphChanged();
             MarkBlueprintModified(Graph, false);
+            RefreshPortalActions();
         }
+    }
+
+    void DeletePortalFamily(UK2Node_Knot* Declaration)
+    {
+        if (!Declaration || GetRole(Declaration) != EPortalKnotRole::Declaration || !Declaration->GetGraph())
+        {
+            return;
+        }
+
+        UEdGraph* Graph = Declaration->GetGraph();
+        TArray<UK2Node_Knot*> Outputs;
+        GetUsages(Declaration, Outputs);
+
+        const FScopedTransaction Transaction(NSLOCTEXT("Portal", "DeletePortalFamily", "Delete Portal Family"));
+        Graph->Modify();
+        Declaration->Modify();
+        for (UK2Node_Knot* Output : Outputs)
+        {
+            if (Output)
+            {
+                Output->Modify();
+            }
+        }
+
+        auto RemoveKnot = [Graph](UK2Node_Knot* Knot)
+        {
+            if (!Knot)
+            {
+                return;
+            }
+
+            for (UEdGraphPin* Pin : Knot->Pins)
+            {
+                if (Pin)
+                {
+                    Pin->BreakAllPinLinks();
+                }
+            }
+            Graph->RemoveNode(Knot);
+        };
+
+        for (UK2Node_Knot* Output : Outputs)
+        {
+            RemoveKnot(Output);
+        }
+        RemoveKnot(Declaration);
+
+        Graph->NotifyGraphChanged();
+        MarkBlueprintModified(Graph, true);
+        RefreshPortalActions();
     }
 
     bool MigrateLegacyGraph(UEdGraph* Graph)

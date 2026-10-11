@@ -7,14 +7,21 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphSchema_K2.h"
+#include "Engine/Blueprint.h"
 #include "Framework/Commands/UIAction.h"
 #include "K2Node_PortalUsage.h"
+#include "K2Node_Knot.h"
 #include "Kismet2/Kismet2NameValidators.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "PortalGraphUtils.h"
+#include "PortalNativeUtils.h"
+#include "PortalNodeSpawner.h"
 #include "ScopedTransaction.h"
 #include "ToolMenu.h"
 #include "ToolMenuSection.h"
+#include "UObject/UObjectIterator.h"
+#include "UObject/UObjectGlobals.h"
 
 #define LOCTEXT_NAMESPACE "K2Node_PortalDeclaration"
 
@@ -157,8 +164,20 @@ bool UK2Node_PortalDeclaration::ShouldDrawNodeAsControlPointOnly(int32& OutInput
 
 void UK2Node_PortalDeclaration::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
-    // Legacy 0.1-0.3 node class retained only so existing assets can load and
-    // migrate to native UK2Node_Knot-backed Portals. New legacy nodes are not exposed.
+    // UE requires a node class to register only spawners whose NodeClass matches
+    // the class currently generating actions. Input actions are therefore owned by
+    // UK2Node_PortalDeclaration. UPortalNodeSpawner migrates the temporary spawned
+    // node to a native UK2Node_Knot before the action completes.
+    UClass* ActionKey = GetClass();
+    if (!ActionRegistrar.IsOpenForRegistration(ActionKey))
+    {
+        return;
+    }
+
+    if (UPortalNodeSpawner* InputSpawner = UPortalNodeSpawner::CreateInputSpawner())
+    {
+        ActionRegistrar.AddBlueprintAction(ActionKey, InputSpawner);
+    }
 }
 
 void UK2Node_PortalDeclaration::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeContextMenuContext* Context) const

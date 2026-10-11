@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Containers/Ticker.h"
+#include "Containers/UnrealString.h"
 #include "Modules/ModuleManager.h"
 
 struct FGraphPanelNodeFactory;
@@ -22,4 +23,5 @@ private:
     TSharedPtr<IInputProcessor> InputProcessor;
     FTSTicker::FDelegateHandle RepairTickerHandle;
     FDelegateHandle GraphContextMenuExtenderHandle;
+    FString LastActionSignature;
 };

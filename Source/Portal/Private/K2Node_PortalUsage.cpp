@@ -6,13 +6,20 @@
 #include "EdGraph/EdGraph.h"
 #include "EdGraph/EdGraphPin.h"
 #include "EdGraphSchema_K2.h"
+#include "Engine/Blueprint.h"
 #include "Framework/Commands/UIAction.h"
 #include "K2Node_PortalDeclaration.h"
+#include "K2Node_Knot.h"
 #include "Kismet2/KismetEditorUtilities.h"
+#include "Kismet2/BlueprintEditorUtils.h"
 #include "KismetCompiler.h"
 #include "PortalGraphUtils.h"
+#include "PortalNativeUtils.h"
+#include "PortalNodeSpawner.h"
 #include "ToolMenu.h"
 #include "ToolMenuSection.h"
+#include "UObject/UObjectIterator.h"
+#include "UObject/UObjectGlobals.h"
 
 #define LOCTEXT_NAMESPACE "K2Node_PortalUsage"
 
@@ -148,8 +155,49 @@ UObject* UK2Node_PortalUsage::GetJumpTargetForDoubleClick() const
 
 void UK2Node_PortalUsage::GetMenuActions(FBlueprintActionDatabaseRegistrar& ActionRegistrar) const
 {
-    // Usage nodes are intentionally not exposed as standalone Blueprint actions.
-    // Create them from a Portal Declaration so they always start bound.
+    // UE requires a node class to register only spawners for its own type. Output
+    // actions therefore belong to UK2Node_PortalUsage, even though the user-facing
+    // result is immediately migrated to a native UK2Node_Knot by the spawner.
+    UClass* ActionKey = GetClass();
+    if (!ActionRegistrar.IsOpenForRegistration(ActionKey))
+    {
+        return;
+    }
+
+    // Named-reroute style output actions are graph-local. Register one action for
+    // every currently loaded native Portal Input and let UPortalNodeSpawner filter
+    // each action to the graph that owns that Input.
+    for (TObjectIterator<UBlueprint> BlueprintIt; BlueprintIt; ++BlueprintIt)
+    {
+        UBlueprint* Blueprint = *BlueprintIt;
+        if (!Blueprint || Blueprint->HasAnyFlags(RF_Transient) || Blueprint->GetOutermost() == GetTransientPackage())
+        {
+            continue;
+        }
+
+        TArray<UK2Node_Knot*> Knots;
+        FBlueprintEditorUtils::GetAllNodesOfClass(Blueprint, Knots);
+        for (UK2Node_Knot* Knot : Knots)
+        {
+            if (!Knot || PortalNativeUtils::GetRole(Knot) != EPortalKnotRole::Declaration)
+            {
+                continue;
+            }
+
+            const UEdGraphPin* InputPin = Knot->GetInputPin();
+            const UEdGraphPin* OutputPin = Knot->GetOutputPin();
+            if ((InputPin && InputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec) ||
+                (OutputPin && OutputPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec))
+            {
+                continue;
+            }
+
+            if (UPortalNodeSpawner* OutputSpawner = UPortalNodeSpawner::CreateOutputSpawner(Knot))
+            {
+                ActionRegistrar.AddBlueprintAction(ActionKey, OutputSpawner);
+            }
+        }
+    }
 }
 
 void UK2Node_PortalUsage::GetNodeContextMenuActions(UToolMenu* Menu, UGraphNodeContextMenuContext* Context) const

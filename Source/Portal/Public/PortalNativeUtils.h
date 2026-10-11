@@ -42,13 +42,21 @@ namespace PortalNativeUtils
     PORTAL_API UK2Node_Knot* FindDeclarationForUsage(const UK2Node_Knot* Usage, bool bAllowRepair = true);
     PORTAL_API void GetUsages(const UK2Node_Knot* Declaration, TArray<UK2Node_Knot*>& OutUsages);
     PORTAL_API bool IsOrphanUsage(const UK2Node_Knot* Usage);
+    PORTAL_API bool CanRetargetUsageToDeclaration(const UK2Node_Knot* Usage, const UK2Node_Knot* NewDeclaration);
+    PORTAL_API bool RetargetUsage(UK2Node_Knot* Usage, UK2Node_Knot* NewDeclaration);
+    PORTAL_API UK2Node_Knot* CreateMissingInputForUsage(UK2Node_Knot* Usage);
 
+    PORTAL_API bool InitializeSpawnedPortalInput(UK2Node_Knot* Knot, FName PreferredName = FName(TEXT("Portal")));
+    PORTAL_API bool InitializeSpawnedPortalOutput(UK2Node_Knot* Knot, UK2Node_Knot* Declaration);
     PORTAL_API UK2Node_Knot* CreatePortalInput(UEdGraph* Graph, const FVector2f& Position);
     PORTAL_API bool CanCreatePortalFromOutputPin(const UEdGraphPin* SourcePin);
-    PORTAL_API UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin);
+    PORTAL_API UK2Node_Knot* CreatePortalFromOutputPin(UEdGraphPin* SourcePin, const FVector2f* OptionalPinPosition = nullptr);
+    PORTAL_API bool CanConnectPortalToInputPin(const UK2Node_Knot* Declaration, const UEdGraphPin* TargetPin);
+    PORTAL_API UK2Node_Knot* CreateUsageAndConnectToInputPin(UK2Node_Knot* Declaration, UEdGraphPin* TargetPin, const FVector2f* OptionalPinPosition = nullptr);
     PORTAL_API UK2Node_Knot* CreateUsage(UK2Node_Knot* Declaration, const FVector2f* OptionalPosition = nullptr);
     PORTAL_API bool ConvertRerouteToPortal(UK2Node_Knot* Knot);
     PORTAL_API void ConvertPortalFamilyToReroutes(UK2Node_Knot* AnyFamilyNode);
+    PORTAL_API void DeletePortalFamily(UK2Node_Knot* Declaration);
 
     PORTAL_API bool RepairGraph(UEdGraph* Graph);
     PORTAL_API bool MigrateLegacyGraph(UEdGraph* Graph);
