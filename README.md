@@ -4,7 +4,7 @@
 # Portal
 ### Cleaner Blueprint graphs. Same native connections.
 
-**Named, reusable data routes for Unreal Engine Blueprints—without the cross-graph wire clutter.**
+**Named, reusable data routes for Unreal Engine Blueprints—without the long-wire clutter.**
 
 **Unreal Engine 5.8.0–5.8.3 · Windows 64-bit · Editor-only · v0.12.0 release candidate**
 
@@ -84,7 +84,7 @@ Portal **v0.12.0 is a release candidate**, and the plugin descriptor currently m
 | **Platform** | Windows 64-bit |
 | **Environment** | Unreal Editor only (`UncookedOnly`) |
 | **Graphs** | Unreal Blueprint graphs |
-| **Connections** | Compatible data pins; one Portal family per graph |
+| **Connections** | Compatible data pins; each Portal family stays within a single graph |
 | **Engine modifications** | Not required |
 
 **What Portal does not do:** It does not route execution wires, share values between separate graphs or Blueprints, create variables or persistent data storage, or add a runtime gameplay system. Portals are graph-local, data-only editing tools. Native Unreal pin compatibility rules still apply.
