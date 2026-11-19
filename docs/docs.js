@@ -155,11 +155,12 @@
       summary:'Native-safe history, current release candidate, and uncommitted research directions',
       search:'portal roadmap release history migration future research native reroutes'});
     pages.push({title:'Documentation Audit',path:'DOCUMENTATION_AUDIT.md',kind:'Document',
-      summary:'Documentation quality findings, prioritized fixes and verification gaps',
-      search:'audit documentation improvements quality gaps testing screenshots search'});
+      summary:'Portal source audit, native safety, capture gaps and compatibility verification',
+      search:'portal documentation audit gaps plugin browser source native reroutes screenshots search'});
     pages.push({title:'Verification Matrix',path:'VERIFICATION_MATRIX.md',kind:'Document',
       summary:'Native Unreal Editor and website QA checklists with explicit results',
-      search:'verification matrix qa tests perforce one file per actor world partition focus website'});
+      search:'portal verification matrix qa tests blueprint graph native reroute orphan migration clipboard engine browser'});
+    pages.push({title:'Media Inventory',path:'MEDIA_INVENTORY.md',kind:'Document',summary:'Screenshot and GIF capture requirements for Portal guides',search:'image gif media inventory capture instructions portal screenshots animations'});
     state.pages=pages;
     state.byPath=new Map(pages.map(p=>[p.path,p]));
   }
@@ -168,7 +169,7 @@
     const out=[];
     out.push('<a class="nav-home" data-page="'+esc(state.manifest.home)+'" href="'+pageUrl(state.manifest.home)+'">⌂ Documentation Home</a>');
     out.push('<a class="ref-link" data-page="ROADMAP.md" href="'+pageUrl('ROADMAP.md')+'">Roadmap · Release History</a>');
-    out.push('<div class="nav-label">CURRENT VERSION · '+esc((state.manifest.baseline||'v2.1.0').replace('Portal ','').toUpperCase())+'</div>');
+    out.push('<div class="nav-label">CURRENT VERSION · '+esc((state.manifest.baseline||'Portal v0.12.0').replace('Portal ','').toUpperCase())+'</div>');
     
     
     
@@ -260,7 +261,7 @@
     });
 
     // Images in Markdown are resolved relative to the Markdown source file,
-    // rather than the site's query-driven /Focus/ page URL. External images
+    // rather than the site's query-driven /Portal/ page URL. External images
     // are left unchanged; this also keeps GitHub's Markdown preview correct.
     els.article.querySelectorAll('img[src]').forEach(img=>{
       const raw=img.getAttribute('src')||'';
