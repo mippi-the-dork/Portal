@@ -1,116 +1,116 @@
-# Portal 0.12.0 Release Candidate
+<div align="center">
+  <img src="Resources/Icon128.png" alt="Portal plugin icon" width="90">
 
-Portal brings Named Reroute-style data routing to Unreal Engine Blueprint graphs.
+# Portal
+### Cleaner Blueprint graphs. Same native connections.
 
-Portal is editor-only and data-only. Portal Inputs and Outputs are saved as native Blueprint reroute nodes, with Portal identity stored as editor metadata. Removing the plugin therefore exposes ordinary reroute nodes and their native wires instead of leaving missing custom Blueprint node classes.
+**Named, reusable data routes for Unreal Engine Blueprints—without the cross-graph wire clutter.**
 
-## Compatibility
+**Unreal Engine 5.8.0–5.8.3 · Windows 64-bit · Editor-only · v0.12.0 release candidate**
 
-- Unreal Engine 5.8.0 - 5.8.3
-- Windows 64-bit
-- Editor only / UncookedOnly
-- Blueprint graphs
-- Data pins only
-- No engine source changes
+[**Explore the Documentation Website**](https://mippi-the-dork.github.io/Portal/) · [Getting Started](https://mippi-the-dork.github.io/Portal/?page=01-getting-started/README.md) · [Report an Issue](https://github.com/mippi-the-dork/Portal/issues/new)
 
-## Creating Portals
+</div>
 
-### Blueprint action browser
+---
 
-Right-click empty Blueprint graph space and search for `Portal`.
+## Your Blueprint logic shouldn't get lost in the wires
 
-Available actions include:
+Blueprint graphs can become difficult to read when a useful value needs to travel across the screen to several distant nodes. Long wires snake through unrelated logic, reroutes multiply, and following a connection means panning back and forth.
 
-- `Create Portal Reroute Node`
-- `Portal > Outputs > Portal Output: <Portal Name>` for Portal Inputs in the current graph
+**Portal gives those data connections a name.** Place one **Portal Input** near the source and any number of **Portal Outputs** where the value is needed within the same graph. Each endpoint is identifiable, and the editor keeps the long connecting bridge out of the way.
 
-Portal Output actions are graph-local. An Input in Event Graph does not appear in a function graph, macro graph, or another Blueprint.
+The graph becomes easier to scan, maintain, and explain to someone opening it for the first time.
 
-You can also search by the Portal name or common terms such as `named reroute`, `reroute`, `get`, and `getter`.
+## What Portal brings to Blueprints
 
-### From pins
+- **Named data routing.** Replace hard-to-follow long data wires with readable Portal Input and Output endpoints.
+- **One source, multiple destinations.** Share an Input with as many compatible Outputs as you need in that Blueprint graph. A visible count shows how many Outputs belong to the family.
+- **Fast, contextual creation.** Create Portals from the Blueprint action menu, directly from compatible data pins, or with **Shift + R + Left Click**.
+- **Easy navigation.** Double-click an Output to jump to its Input, double-click an Input to select its Outputs, or use **Select Portal Family**.
+- **Flexible editing.** Rename a family, create additional Outputs, retarget a compatible Output, and delete or convert a family intentionally.
+- **Orphan recovery.** If an Input goes missing, reconnect its Outputs, recreate the missing Input, or turn an orphan into an ordinary reroute.
+- **Native-safe Blueprint assets.** Portal saves stock Unreal reroute nodes and standard Blueprint pin links—not a special runtime dependency.
 
-- Right-click a compatible data output pin and choose `Create Portal` to create and connect a new Portal Input.
-- Right-click an unconnected compatible data input pin and choose `Connect Portal Output` to choose an existing Portal Input and connect a new Output.
-- Pin-created Portal nodes are positioned next to the exact pin used to create them.
+## The difference is in what gets saved
 
-### Fast creation
+Portal isn't just a custom visual node. Its native-safe design is intended to ensure your Blueprint doesn't depend on the plugin to retain its data routing.
 
-- Shift + R + Left Click creates a Portal Input.
-- Shift + R + Left Click while one Portal family member is selected creates another Output for that family.
+**With Portal enabled:** a source and its distant consumers appear as named Input and Output nodes without a long visible bridging wire.
 
-## Portal node layout
+**Without Portal:** those same saved connections appear as ordinary native Blueprint reroutes and their normal wires. The Portal-specific presentation disappears, but the saved graph does not require a custom Portal node class to load.
 
-Portal Inputs and Outputs mirror one another:
+That means Portal helps you organize a graph **without making its logic dependent on a proprietary Blueprint node format**.
 
-```text
-Input:   pin | icon | name | count
-Output:  count | name | icon | pin
-```
+[**How native-safe Portals work →**](https://mippi-the-dork.github.io/Portal/?page=03-safety-and-recovery/native-safe/DESIGN.md) · [Technical architecture](https://mippi-the-dork.github.io/Portal/?page=03-safety-and-recovery/native-safe/TECHNICAL.md)
 
-The count is the total number of Outputs in the family. Inputs show `0` when they do not yet have any Outputs.
+## Work faster, from creation to cleanup
 
-- Double-click an Output to jump to its Input.
-- Double-click an Input to select all Outputs in that family.
-- `Select Portal Family` selects the Input and all Outputs.
-- The node keeps a fixed height while renaming.
+| When you want to… | Portal helps you… |
+| --- | --- |
+| Route a value across a large graph | Create a named Input at the source and an Output near the consumer |
+| Use the same value in several places | Add multiple Outputs to one Input |
+| Find where a value originates | Jump directly from an Output to its Input |
+| Reorganize a Blueprint | Rename, select, or retarget an entire Portal family |
+| Recover a broken family | Reconnect orphaned Outputs or recreate their missing Input |
+| Stop using Portal | Convert families to native reroutes, or let Unreal show the native reroutes if the plugin is absent |
 
-## Family editing
+## Learn Portal in the documentation
 
-Right-click a Portal Output to:
+**The dedicated documentation website is the source for setup, controls, workflows, technical details, and troubleshooting.** This README introduces the plugin; the documentation explains it.
 
-- create another Output
-- jump to its Input
-- select the Portal family
-- change the Output to another compatible Input
+**[OPEN THE PORTAL DOCUMENTATION WEBSITE](https://mippi-the-dork.github.io/Portal/)**
 
-Right-click an orphaned Output to:
+| Guide | What you'll learn |
+| --- | --- |
+| [Installation and compatibility](https://mippi-the-dork.github.io/Portal/?page=01-getting-started/installation/DESIGN.md) | Supported Unreal versions and how to install Portal |
+| [Your first Portal family](https://mippi-the-dork.github.io/Portal/?page=01-getting-started/first-portal/DESIGN.md) | Create, connect, and navigate a working Input/Output pair |
+| [Creating Portals from menus and pins](https://mippi-the-dork.github.io/Portal/?page=02-creating-and-using-portals/creation-paths/DESIGN.md) | Choose the fastest creation workflow |
+| [Inputs, Outputs, and counts](https://mippi-the-dork.github.io/Portal/?page=02-creating-and-using-portals/inputs-and-outputs/DESIGN.md) | Understand Portal family layout and membership |
+| [Renaming, retargeting, and deleting](https://mippi-the-dork.github.io/Portal/?page=02-creating-and-using-portals/family-editing/DESIGN.md) | Safely change or remove existing families |
+| [Orphaned Outputs and recovery](https://mippi-the-dork.github.io/Portal/?page=03-safety-and-recovery/orphans/DESIGN.md) | Repair lost source relationships |
+| [Frequently asked questions](https://mippi-the-dork.github.io/Portal/?page=05-support/faq/DESIGN.md) | Clear answers to common behavior questions |
+| [Technical documentation](https://mippi-the-dork.github.io/Portal/?page=04-editor-integration/README.md) | Editor hooks, native Blueprint data, and implementation |
 
-- `Create Missing Input`
-- `Reconnect Output`
-- `Convert Output to Reroute`
+You can also [read the Markdown documentation directly on GitHub](https://github.com/mippi-the-dork/Portal/tree/main/docs).
 
-If several orphaned Outputs share the same missing family identity, `Create Missing Input` repairs the family together.
+## Compatibility and limitations
 
-Right-click a Portal Input and choose `Delete Portal Family` to remove the Input and all Outputs in one undoable operation.
+Portal **v0.12.0 is a release candidate**, and the plugin descriptor currently marks it as beta.
 
-Pressing Delete on a Portal Input that still has Outputs asks whether to delete the whole family, delete only the Input and intentionally leave recoverable Outputs, or cancel.
+| | |
+| --- | --- |
+| **Engine** | Unreal Engine 5.8.0–5.8.3 |
+| **Platform** | Windows 64-bit |
+| **Environment** | Unreal Editor only (`UncookedOnly`) |
+| **Graphs** | Unreal Blueprint graphs |
+| **Connections** | Compatible data pins; one Portal family per graph |
+| **Engine modifications** | Not required |
 
-## Native-safe fallback
+**What Portal does not do:** It does not route execution wires, share values between separate graphs or Blueprints, create variables or persistent data storage, or add a runtime gameplay system. Portals are graph-local, data-only editing tools. Native Unreal pin compatibility rules still apply.
 
-With Portal installed, a family can look like this:
+See [Graph Scope and Type Compatibility](https://mippi-the-dork.github.io/Portal/?page=02-creating-and-using-portals/graph-boundaries/DESIGN.md) and [Troubleshooting](https://mippi-the-dork.github.io/Portal/?page=05-support/troubleshooting/DESIGN.md) for examples of unsupported cases and recovery workflows.
 
-```text
-Source -> [ Game Time ]
+## Help shape Portal
 
-                    [ Game Time ] -> Consumer
-```
+**Found a bug?** [Report an issue](https://github.com/mippi-the-dork/Portal/issues/new) with your Unreal Engine version, Portal version, reproduction steps, expected behavior, and relevant logs or screenshots.
 
-The saved Blueprint contains native reroutes and a native connection underneath:
+**Have an idea?** [Request a feature](https://github.com/mippi-the-dork/Portal/issues/new) and describe the Blueprint workflow it would improve. Suggestions and bug reports help prioritize future work.
 
-```text
-Source -> Reroute ---------------- Reroute -> Consumer
-```
+**Want to contribute?** [Open a pull request](https://github.com/mippi-the-dork/Portal/pulls) with a focused explanation of the change, its intended behavior, and any tests performed. For larger changes, start with an issue so the direction can be discussed first.
 
-Portal hides the internal bridge visually while installed. The native pins and connections remain in the asset.
+You can follow [the Portal roadmap](https://mippi-the-dork.github.io/Portal/?page=ROADMAP.md) for documented release history and future directions. Proposed work should not be treated as shipped functionality.
 
-If Portal is removed:
+## License
 
-- no Portal-specific Blueprint node class is required to load the saved graph
-- Portal nodes appear as ordinary Blueprint reroutes
-- the hidden internal wire becomes visible
-- Blueprint connectivity remains intact
+Portal is available under the **MIT License**. See [LICENSE](LICENSE) for the full terms.
 
-## Execution pins
+---
 
-Portal does not support execution pins. Unreal's native exec reroute behavior assumes one outgoing execution continuation, which does not map safely to one Portal Input with multiple hidden Outputs.
+<div align="center">
 
-## 0.12.0 release-candidate polish
+**Spend less time tracing wires. Spend more time building Blueprint logic.**
 
-- Inputs now display an explicit Output count of `0` instead of hiding the count when a family has no Outputs.
-- Portal node tooltips now include the family name consistently on both Inputs and Outputs.
-- User-facing documentation has been consolidated around the current Input / Output terminology and current Blueprint action-browser workflow.
-- The release validation plan now covers creation paths, action search, copy/paste, Undo/Redo, orphan recovery, graph scoping, execution-pin rejection, save/reopen, and uninstall fallback.
-- No new runtime dependency or serialized Portal node class was introduced.
+[**Read the Documentation**](https://mippi-the-dork.github.io/Portal/) · [GitHub Issues](https://github.com/mippi-the-dork/Portal/issues) · [License](LICENSE)
 
-See `Doc/Prototype-Test-Plan.md` for the full release-candidate validation checklist.
+</div>
