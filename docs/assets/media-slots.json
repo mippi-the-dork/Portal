@@ -1,0 +1,186 @@
+{
+  "current_placeholder": "assets/media-placeholder.png",
+  "note": "Image/GIF slots display supplied placeholder PNG until authentic media is captured; captions are public reader-facing copy and second lines are capture instructions.",
+  "slots": [
+    {
+      "id": "overview-graph",
+      "kind": "image",
+      "page": "01-getting-started/overview/DESIGN.md",
+      "caption": "A Portal family replaces long visible data wires with named Input and Output endpoints.",
+      "alt": "A Portal family replaces long visible data wires with named Input and Output endpoints.",
+      "capture_instructions": "Show a Blueprint graph with a data source connected to one named Portal Input and two distant Portal Outputs feeding consumers. Keep the family name, count and graph context visible.",
+      "final_asset": "assets/media/overview-graph.png"
+    },
+    {
+      "id": "installation-folder",
+      "kind": "image",
+      "page": "01-getting-started/installation/DESIGN.md",
+      "caption": "A project installation keeps the Portal descriptor and source files together under the Plugins directory.",
+      "alt": "A project installation keeps the Portal descriptor and source files together under the Plugins directory.",
+      "capture_instructions": "Capture File Explorer at YourProject/Plugins/Portal with Portal.uplugin, Source, Resources, README.md and Doc clearly visible. Include the path bar.",
+      "final_asset": "assets/media/installation-folder.png"
+    },
+    {
+      "id": "first-portal",
+      "kind": "gif",
+      "page": "01-getting-started/first-portal/DESIGN.md",
+      "caption": "Creating a Portal from a pin establishes a named Input and a connected Output in the same Blueprint graph.",
+      "alt": "Creating a Portal from a pin establishes a named Input and a connected Output in the same Blueprint graph.",
+      "capture_instructions": "Record creating a Portal from a float output pin, renaming its Input, connecting an Output from a distant compatible consumer pin, and double-clicking that Output to jump back. Keep each context menu readable.",
+      "final_asset": "assets/media/first-portal.gif"
+    },
+    {
+      "id": "node-mirrors",
+      "kind": "image",
+      "page": "02-creating-and-using-portals/inputs-and-outputs/DESIGN.md",
+      "caption": "Portal Inputs and Outputs mirror their labels, icons and shared Output counts.",
+      "alt": "Portal Inputs and Outputs mirror their labels, icons and shared Output counts.",
+      "capture_instructions": "Capture one Input and two Outputs with the same family name and clearly visible mirrored node layouts and count of 2. Use a clean, zoomed-in Blueprint graph.",
+      "final_asset": "assets/media/node-mirrors.png"
+    },
+    {
+      "id": "creation-choices",
+      "kind": "gif",
+      "page": "02-creating-and-using-portals/creation-paths/DESIGN.md",
+      "caption": "Portal supports graph-menu creation as well as context-aware creation directly from compatible data pins.",
+      "alt": "Portal supports graph-menu creation as well as context-aware creation directly from compatible data pins.",
+      "capture_instructions": "Record three brief sequences: creating an Input by right-clicking empty graph space, creating it from a data output pin, and connecting a Portal Output from an unconnected data input pin. Highlight the chosen menu item each time.",
+      "final_asset": "assets/media/creation-choices.gif"
+    },
+    {
+      "id": "family-retarget",
+      "kind": "gif",
+      "page": "02-creating-and-using-portals/family-editing/DESIGN.md",
+      "caption": "An Output can be moved to a compatible Input without replacing its downstream consumer node.",
+      "alt": "An Output can be moved to a compatible Input without replacing its downstream consumer node.",
+      "capture_instructions": "Record one Portal family with two Outputs, open Change Input on one Output, retarget it to another compatible Input, and show the two families\u2019 updated counts while the consumer remains connected.",
+      "final_asset": "assets/media/family-retarget.gif"
+    },
+    {
+      "id": "navigation-jump",
+      "kind": "gif",
+      "page": "02-creating-and-using-portals/navigation/DESIGN.md",
+      "caption": "Double-click navigation makes distant Portal family endpoints easy to find and inspect.",
+      "alt": "Double-click navigation makes distant Portal family endpoints easy to find and inspect.",
+      "capture_instructions": "Record a wide Blueprint graph with the Input and Outputs far apart. Double-click an Output to jump to the Input, then double-click the Input to select all Outputs; show the selection clearly.",
+      "final_asset": "assets/media/navigation-jump.gif"
+    },
+    {
+      "id": "graph-locality",
+      "kind": "image",
+      "page": "02-creating-and-using-portals/graph-boundaries/DESIGN.md",
+      "caption": "Portal families belong to individual Blueprint graphs rather than spanning functions or other graphs.",
+      "alt": "Portal families belong to individual Blueprint graphs rather than spanning functions or other graphs.",
+      "capture_instructions": "Create a labeled two-panel diagram of Event Graph and a function graph. Show a valid Input-to-Output family within Event Graph and a clearly blocked connection across the graph boundary.",
+      "final_asset": "assets/media/graph-locality.png"
+    },
+    {
+      "id": "native-fallback",
+      "kind": "image",
+      "page": "03-safety-and-recovery/native-safe/DESIGN.md",
+      "caption": "Portal changes how a native data connection is displayed, not the connection that Blueprint serialization preserves.",
+      "alt": "Portal changes how a native data connection is displayed, not the connection that Blueprint serialization preserves.",
+      "capture_instructions": "Make a side-by-side diagram: left shows named Portal Input and Output with the hidden bridge, right shows the same two native reroutes connected by a visible standard Blueprint wire after disabling Portal. Label the preserved connectivity.",
+      "final_asset": "assets/media/native-fallback.png"
+    },
+    {
+      "id": "orphan-recovery",
+      "kind": "gif",
+      "page": "03-safety-and-recovery/orphans/DESIGN.md",
+      "caption": "Orphan recovery can reconstruct an Input and reconnect related Outputs from the same missing family.",
+      "alt": "Orphan recovery can reconstruct an Input and reconnect related Outputs from the same missing family.",
+      "capture_instructions": "Record deleting a Portal Input while deliberately retaining its Outputs, then right-click an orphan and use Create Missing Input. Show the recovered Input and restored family count; compile afterward.",
+      "final_asset": "assets/media/orphan-recovery.gif"
+    },
+    {
+      "id": "migration-before-after",
+      "kind": "image",
+      "page": "03-safety-and-recovery/migration/DESIGN.md",
+      "caption": "Legacy Portal data is converted into native reroute nodes while preserving compatible Blueprint connections.",
+      "alt": "Legacy Portal data is converted into native reroute nodes while preserving compatible Blueprint connections.",
+      "capture_instructions": "Create a diagram showing historical custom Portal nodes migrating to current native UK2Node_Knot endpoints, with metadata and existing wires retained. Include a note that migrated assets must be compiled and saved.",
+      "final_asset": "assets/media/migration-before-after.png"
+    },
+    {
+      "id": "copy-paste-family",
+      "kind": "gif",
+      "page": "03-safety-and-recovery/copy-paste/DESIGN.md",
+      "caption": "Portal attempts to preserve family membership while resolving duplicate identities introduced by graph copying.",
+      "alt": "Portal attempts to preserve family membership while resolving duplicate identities introduced by graph copying.",
+      "capture_instructions": "Record copying a Portal Input and its two Outputs within one Blueprint graph, pasting the family, and confirming the copy has a separate identity and correct Output counts. End with Undo/Redo and a successful compile.",
+      "final_asset": "assets/media/copy-paste-family.gif"
+    },
+    {
+      "id": "action-browser",
+      "kind": "image",
+      "page": "04-editor-integration/action-browser/DESIGN.md",
+      "caption": "Blueprint action search exposes the Input creation command and Output actions for families in the current graph.",
+      "alt": "Blueprint action search exposes the Input creation command and Output actions for families in the current graph.",
+      "capture_instructions": "Capture the right-click Blueprint action search showing Create Portal Reroute Node and several Portal Output entries for actual Inputs in the active graph. Keep the search term, family name and type/count context readable.",
+      "final_asset": "assets/media/action-browser.png"
+    },
+    {
+      "id": "node-ui-anatomy",
+      "kind": "image",
+      "page": "04-editor-integration/node-presentation/DESIGN.md",
+      "caption": "Mirrored node layouts and family counts communicate Portal direction and usage at a glance.",
+      "alt": "Mirrored node layouts and family counts communicate Portal direction and usage at a glance.",
+      "capture_instructions": "Capture close-up Input and Output nodes showing pin, icon, name and count positions. Include one Input with count 0 and another family with multiple Outputs for comparison.",
+      "final_asset": "assets/media/node-ui-anatomy.png"
+    },
+    {
+      "id": "shortcut-creation",
+      "kind": "gif",
+      "page": "04-editor-integration/shortcuts-and-browser/DESIGN.md",
+      "caption": "The Shift+R shortcut creates an Input or an additional Output depending on the current Portal family selection.",
+      "alt": "The Shift+R shortcut creates an Input or an additional Output depending on the current Portal family selection.",
+      "capture_instructions": "Record the Blueprint graph with no selection, hold Shift+R and left-click to create an Input. Then select that Input and repeat Shift+R+left-click elsewhere to create an Output; keep cursor positions and selection visible.",
+      "final_asset": "assets/media/shortcut-creation.gif"
+    },
+    {
+      "id": "architecture-diagram",
+      "kind": "image",
+      "page": "04-editor-integration/technical-architecture/DESIGN.md",
+      "caption": "Portal organizes editor interaction around native Blueprint reroutes and a separate presentation layer.",
+      "alt": "Portal organizes editor interaction around native Blueprint reroutes and a separate presentation layer.",
+      "capture_instructions": "Make a labeled technical diagram with FPortalModule at the center, connected to UPortalNodeSpawner, ToolMenus, FPortalInputProcessor, FPortalNodeFactory/SPortalNativeKnotNode, and PortalNativeUtils. Below, show native UK2Node_Knot plus metadata as the saved graph state.",
+      "final_asset": "assets/media/architecture-diagram.png"
+    },
+    {
+      "id": "faq-graph-comparison",
+      "kind": "image",
+      "page": "05-support/faq/DESIGN.md",
+      "caption": "A Portal is a readable presentation of a normal Blueprint data connection.",
+      "alt": "A Portal is a readable presentation of a normal Blueprint data connection.",
+      "capture_instructions": "Create a simple side-by-side Blueprint screenshot: a healthy named Portal family on the left and its ordinary native reroute equivalent on the right. Keep the wire and data pins legible.",
+      "final_asset": "assets/media/faq-graph-comparison.png"
+    },
+    {
+      "id": "troubleshooting-orphan",
+      "kind": "image",
+      "page": "05-support/troubleshooting/DESIGN.md",
+      "caption": "An orphaned Output offers explicit recovery and conversion choices in its context menu.",
+      "alt": "An orphaned Output offers explicit recovery and conversion choices in its context menu.",
+      "capture_instructions": "Capture an orphaned Output\u2019s context menu with Create Missing Input, Reconnect Output where a compatible Input exists, and Convert Output to Reroute clearly legible. Include part of the surrounding Blueprint graph.",
+      "final_asset": "assets/media/troubleshooting-orphan.png"
+    },
+    {
+      "id": "updating-folder",
+      "kind": "image",
+      "page": "05-support/updates/DESIGN.md",
+      "caption": "Updating Portal replaces the complete editor plugin installation while preserving the project\u2019s Blueprint assets.",
+      "alt": "Updating Portal replaces the complete editor plugin installation while preserving the project\u2019s Blueprint assets.",
+      "capture_instructions": "Capture File Explorer showing the complete Portal folder under YourProject/Plugins, with Portal.uplugin visible. If using a release ZIP, show the folder structure that will replace the previous installation.",
+      "final_asset": "assets/media/updating-folder.png"
+    },
+    {
+      "id": "portal-home-hero",
+      "kind": "image",
+      "page": "README.md",
+      "caption": "Portal replaces distant data wires with clearly named endpoints while preserving native Blueprint connections.",
+      "alt": "Example of Portal Input and Outputs in a Blueprint graph",
+      "capture_instructions": "Capture a clean wide Unreal Blueprint graph: a data source connected to a named Portal Input, two Outputs connected to distant consumers, and enough surrounding nodes to demonstrate the reduction in wire clutter. Use a sharp 16:9 view with the names and count legible.",
+      "final_asset": "assets/media/portal-home-hero.png"
+    }
+  ]
+}
